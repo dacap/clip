@@ -5,9 +5,13 @@
 
 #ifdef _WIN32
   #include "copypaste_win.h"
+#elif __APPLE__
+  #include "copypaste_osx.h"
 #else
   #include "copypaste_none.h"
 #endif
+
+#include <vector>
 
 namespace copypaste {
 

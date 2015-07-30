@@ -4,7 +4,10 @@
 > Distributed under [MIT license](LICENSE.txt)
 
 Library to copy/retrieve content to/from the clipboard/pasteboard.
-Supports Windows.
+
+## Features
+
+* Copy/paste UTF-8 text on Windows and Mac OS X.
 
 ## Example
 
@@ -21,7 +24,6 @@ Supports Windows.
 
 ## To-do
 
-* Support Mac OS X pasteboard
 * Support Linux (GTK? KDE? X11?) clipboard
 * Add support to copy/paste images
 * Add support to copy/paste user-defined formats
