@@ -17,15 +17,14 @@ namespace clip {
 
 namespace {
 
-void default_error_handler(ErrorCode code)
-{
+void default_error_handler(ErrorCode code) {
   static const char* err[] = {
     "Cannot lock clipboard"
   };
   throw std::runtime_error(err[code]);
 }
 
-}
+} // anonymous namespace
 
 error_handler g_error_handler = default_error_handler;
 
@@ -71,21 +70,33 @@ format text_format() {
 
 bool has(format f) {
   lock l(nullptr);
+  if (!l.locked())
+    return false;
+
   return l.is_convertible(f);
 }
 
 bool clear() {
   lock l(nullptr);
+  if (!l.locked())
+    return false;
+
   return l.clear();
 }
 
 bool set_text(const std::string& value) {
   lock l(nullptr);
+  if (!l.locked())
+    return false;
+
   return l.set_data(text_format(), value.c_str(), value.size()+1);
 }
 
 bool get_text(std::string& value) {
   lock l(nullptr);
+  if (!l.locked())
+    return false;
+
   format f = text_format();
   if (!l.is_convertible(f))
     return false;
@@ -103,13 +114,11 @@ bool get_text(std::string& value) {
   }
 }
 
-void set_error_handler(error_handler handler)
-{
+void set_error_handler(error_handler handler) {
   g_error_handler = handler;
 }
 
-error_handler get_error_handler()
-{
+error_handler get_error_handler() {
   return g_error_handler;
 }
 

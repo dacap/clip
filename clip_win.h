@@ -29,7 +29,8 @@ public:
   }
 
   ~impl() {
-    CloseClipboard();
+    if (m_locked)
+      CloseClipboard();
   }
 
   bool locked() const {
