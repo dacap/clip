@@ -1,15 +1,15 @@
-// Copy-Paste Library
+// Clip Library
 // Copyright (c) 2015 David Capello
 
-#include "copypaste.h"
+#include "clip.h"
 #include "random.h"
 #include <cassert>
 #include <iostream>
 
-using namespace copypaste;
+using namespace clip;
 
 int main() {
-  format int_format = register_format("CopyPaste.CustomInt");
+  format int_format = register_format("Clip.CustomInt");
 
   {
     lock l(nullptr);

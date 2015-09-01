@@ -1,9 +1,9 @@
-# Copy-Paste Library
+# Clip Library
 # Copyright (C) 2015 David Capello
 
 function(add_example name)
   add_executable(${name} ${name}.cpp)
-  target_link_libraries(${name} copypaste)
+  target_link_libraries(${name} clip)
 endfunction()
 
 add_example(helloworld)

@@ -1,4 +1,4 @@
-# Copy-Paste Library
+# Clip Library
 *Copyright (C) 2015 David Capello*
 
 > Distributed under [MIT license](LICENSE.txt)
@@ -11,20 +11,20 @@ Library to copy/retrieve content to/from the clipboard/pasteboard.
 
 ## Example
 
-    #include "copypaste.h"
+    #include "clip.h"
     #include <iostream>
 
     int main() {
-      copypaste::set_text("Hello World");
+      clip::set_text("Hello World");
 
       std::string value;
-      copypaste::get_text(value);
+      clip::get_text(value);
       std::cout << value << "\n";
     }
 
 ## User-defined clipboard formats
 
-    using namespace copypaste;
+    using namespace clip;
 
     int main() {
       format my_format = register_format("AppName.FormatName");

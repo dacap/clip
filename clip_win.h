@@ -1,11 +1,11 @@
-// Copy-Paste Library
+// Clip Library
 // Copyright (c) 2015 David Capello
 
 #include <cassert>
 #include <vector>
 #include <windows.h>
 
-namespace copypaste {
+namespace clip {
 
 class lock::impl {
 public:
@@ -202,4 +202,4 @@ format register_format(const std::string& name) {
   return (format)RegisterClipboardFormatW(&buf[0]);
 }
 
-} // namespace copypaste
+} // namespace clip

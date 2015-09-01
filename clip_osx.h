@@ -1,10 +1,10 @@
-// Copy-Paste Library
+// Clip Library
 // Copyright (c) 2015 David Capello
 
-#ifndef COPYPASTE_OSX_H_INCLUDED
-#define COPYPASTE_OSX_H_INCLUDED
+#ifndef CLIP_OSX_H_INCLUDED
+#define CLIP_OSX_H_INCLUDED
 
-namespace copypaste {
+namespace clip {
 
 class lock::impl {
 public:
@@ -18,6 +18,6 @@ public:
   size_t get_data_length(format f) const;
 };
 
-} // namespace copypaste
+} // namespace clip
 
 #endif

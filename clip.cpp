@@ -1,19 +1,19 @@
-// Copy-Paste Library
+// Clip Library
 // Copyright (c) 2015 David Capello
 
-#include "copypaste.h"
+#include "clip.h"
 
 #ifdef _WIN32
-  #include "copypaste_win.h"
+  #include "clip_win.h"
 #elif __APPLE__
-  #include "copypaste_osx.h"
+  #include "clip_osx.h"
 #else
-  #include "copypaste_none.h"
+  #include "clip_none.h"
 #endif
 
 #include <vector>
 
-namespace copypaste {
+namespace clip {
 
 lock::lock(void* native_handle)
   : p(new impl(native_handle)) {
@@ -85,4 +85,4 @@ bool get_text(std::string& value) {
   }
 }
 
-} // namespace copypaste
+} // namespace clip

@@ -1,10 +1,10 @@
-// Copy-Paste Library
+// Clip Library
 // Copyright (c) 2015 David Capello
 
 #include <cassert>
 #include <vector>
 
-namespace copypaste {
+namespace clip {
 
 static format g_format;
 static std::vector<char> g_data;
@@ -50,4 +50,4 @@ public:
 
 };
 
-} // namespace copypaste
+} // namespace clip

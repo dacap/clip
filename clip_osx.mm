@@ -1,8 +1,8 @@
-// Copy-Paste Library
+// Clip Library
 // Copyright (c) 2015 David Capello
 
-#include "copypaste.h"
-#include "copypaste_osx.h"
+#include "clip.h"
+#include "clip_osx.h"
 
 #include <cassert>
 #include <vector>
@@ -11,7 +11,7 @@
 #include <Foundation/Foundation.h>
 #include <AppKit/AppKit.h>
 
-namespace copypaste {
+namespace clip {
 
 lock::impl::impl(void*) {
 }
@@ -79,4 +79,4 @@ size_t lock::impl::get_data_length(format f) const {
   return len;
 }
 
-} // namespace copypaste
+} // namespace clip

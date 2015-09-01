@@ -1,13 +1,13 @@
-// Copy-Paste Library
+// Clip Library
 // Copyright (c) 2015 David Capello
 
-#ifndef COPYPASTE_H_INCLUDED
-#define COPYPASTE_H_INCLUDED
+#ifndef CLIP_H_INCLUDED
+#define CLIP_H_INCLUDED
 #pragma once
 
 #include <string>
 
-namespace copypaste {
+namespace clip {
 
   // Clipboard format identifier.
   typedef size_t format;
@@ -51,6 +51,6 @@ namespace copypaste {
   bool set_text(const std::string& value);
   bool get_text(std::string& value);
 
-} // namespace copypaste
+} // namespace clip
 
-#endif // COPYPASTE_H_INCLUDED
+#endif // CLIP_H_INCLUDED

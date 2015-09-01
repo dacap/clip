@@ -1,13 +1,13 @@
-// Copy-Paste Library
+// Clip Library
 // Copyright (c) 2015 David Capello
 
-#include "copypaste.h"
+#include "clip.h"
 #include <iostream>
 
 int main() {
-  if (copypaste::has(copypaste::text_format())) {
+  if (clip::has(clip::text_format())) {
     std::string value;
-    copypaste::get_text(value);
+    clip::get_text(value);
 
     std::cout << "Clipboard content is '" << value << "'\n";
   }
