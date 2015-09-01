@@ -21,8 +21,11 @@ public:
       Sleep(100);
     }
 
-    if (!opened)
-      throw std::runtime_error("Cannot open clipboard");
+    if (!opened) {
+      error_handler e = get_error_handler();
+      if (e)
+        e(CannotLock);
+    }
   }
 
   ~impl() {

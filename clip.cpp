@@ -15,6 +15,20 @@
 
 namespace clip {
 
+namespace {
+
+void default_error_handler(ErrorCode code)
+{
+  static const char* err[] = {
+    "Cannot lock clipboard"
+  };
+  throw std::runtime_error(err[code]);
+}
+
+}
+
+error_handler g_error_handler = default_error_handler;
+
 lock::lock(void* native_handle)
   : p(new impl(native_handle)) {
 }
@@ -83,6 +97,16 @@ bool get_text(std::string& value) {
     value.clear();
     return true;
   }
+}
+
+void set_error_handler(error_handler handler)
+{
+  g_error_handler = handler;
+}
+
+error_handler get_error_handler()
+{
+  return g_error_handler;
 }
 
 } // namespace clip

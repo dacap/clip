@@ -51,6 +51,17 @@ namespace clip {
   bool set_text(const std::string& value);
   bool get_text(std::string& value);
 
+  // Error handling
+
+  enum ErrorCode {
+    CannotLock,
+  };
+
+  typedef void (*error_handler)(ErrorCode code);
+
+  void set_error_handler(error_handler f);
+  error_handler get_error_handler();
+
 } // namespace clip
 
 #endif // CLIP_H_INCLUDED
