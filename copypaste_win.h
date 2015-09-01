@@ -40,13 +40,16 @@ public:
          IsClipboardFormatAvailable(CF_UNICODETEXT) ||
          IsClipboardFormatAvailable(CF_OEMTEXT));
     }
-    return false;
+    else if (IsClipboardFormatAvailable(f))
+      return true;
+    else
+      return false;
   }
 
   bool set_data(format f, const char* buf, size_t len) {
-    if (f == text_format()) {
-      EmptyClipboard();
+    bool result = false;
 
+    if (f == text_format()) {
       if (len > 0) {
         int reqsize = MultiByteToWideChar(CP_UTF8, 0, buf, len, NULL, 0);
         if (reqsize > 0) {
@@ -61,10 +64,24 @@ public:
           SetClipboardData(CF_UNICODETEXT, hglobal);
         }
       }
-      return true;
+      result = true;
     }
-    else
-      return false;
+    else {
+      HGLOBAL hglobal = GlobalAlloc(GHND, len+sizeof(size_t));
+      if (hglobal) {
+        size_t* dst = (size_t*)GlobalLock(hglobal);
+        if (dst) {
+          *dst = len;
+          memcpy(dst+1, buf, len);
+          GlobalUnlock(hglobal);
+          SetClipboardData(f, hglobal);
+          GlobalFree(hglobal);
+          result = true;
+        }
+      }
+    }
+
+    return result;
   }
 
   bool get_data(format f, char* buf, size_t len) const {
@@ -72,6 +89,8 @@ public:
 
     if (!buf || !is_convertible(f))
       return false;
+
+    bool result = false;
 
     if (f == text_format()) {
       if (IsClipboardFormatAvailable(CF_UNICODETEXT)) {
@@ -84,16 +103,12 @@ public:
                                   NULL, 0, NULL, NULL) + 1;
 
             assert(reqsize <= len);
-            if (reqsize > len) {
-              // Buffer is too small
-              return false;
+            if (reqsize <= len) {
+              WideCharToMultiByte(CP_UTF8, 0, lpstr, wcslen(lpstr),
+                                  buf, reqsize, NULL, NULL);
+              result = true;
             }
-
-            WideCharToMultiByte(CP_UTF8, 0, lpstr, wcslen(lpstr),
-                                buf, reqsize, NULL, NULL);
-
             GlobalUnlock(hglobal);
-            return true;
           }
         }
       }
@@ -102,15 +117,33 @@ public:
         if (hglobal) {
           LPSTR lpstr = static_cast<LPSTR>(GlobalLock(hglobal));
           if (lpstr) {
+            // TODO check length
             memcpy(buf, lpstr, len);
+            result = true;
             GlobalUnlock(hglobal);
-            return true;
+          }
+        }
+      }
+    }
+    else {
+      if (IsClipboardFormatAvailable(f)) {
+        HGLOBAL hglobal = GetClipboardData(f);
+        if (hglobal) {
+          const size_t* ptr = (const size_t*)GlobalLock(hglobal);
+          if (ptr) {
+            size_t reqsize = *ptr;
+            assert(reqsize <= len);
+            if (reqsize <= len) {
+              memcpy(buf, ptr+1, reqsize);
+              result = true;
+            }
+            GlobalUnlock(hglobal);
           }
         }
       }
     }
 
-    return false;
+    return result;
   }
 
   size_t get_data_length(format f) const {
@@ -132,9 +165,22 @@ public:
       else if (IsClipboardFormatAvailable(CF_TEXT)) {
         HGLOBAL hglobal = GetClipboardData(CF_TEXT);
         if (hglobal) {
-          LPSTR lpstr = static_cast<LPSTR>(GlobalLock(hglobal));
+          LPSTR lpstr = (LPSTR)GlobalLock(hglobal);
           if (lpstr) {
             len = strlen(lpstr) + 1;
+            GlobalUnlock(hglobal);
+          }
+        }
+      }
+    }
+    // TODO check if it's a registered custom format
+    else if (f != empty_format()) {
+      if (IsClipboardFormatAvailable(f)) {
+        HGLOBAL hglobal = GetClipboardData(f);
+        if (hglobal) {
+          const size_t* ptr = (const size_t*)GlobalLock(hglobal);
+          if (ptr) {
+            len = *ptr;
             GlobalUnlock(hglobal);
           }
         }
@@ -145,5 +191,15 @@ public:
   }
 
 };
+
+format register_format(const std::string& name) {
+  int reqsize = 1+MultiByteToWideChar(CP_UTF8, 0,
+                                      name.c_str(), name.size(), NULL, 0);
+  std::vector<WCHAR> buf(reqsize);
+  MultiByteToWideChar(CP_UTF8, 0, name.c_str(), name.size(),
+                      &buf[0], reqsize);
+
+  return (format)RegisterClipboardFormatW(&buf[0]);
+}
 
 } // namespace copypaste

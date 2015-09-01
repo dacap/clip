@@ -7,4 +7,5 @@ function(add_example name)
 endfunction()
 
 add_example(helloworld)
+add_example(int_format)
 add_example(paste)

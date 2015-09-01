@@ -32,6 +32,8 @@ namespace copypaste {
     impl* p;
   };
 
+  format register_format(const std::string& name);
+
   // This format is when the clipboard has no content.
   format empty_format();
 
