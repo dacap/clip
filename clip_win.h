@@ -8,20 +8,20 @@
 namespace clip {
 
 class lock::impl {
+  bool m_locked;
+
 public:
 
-  impl(void* hwnd) {
-    bool opened = false;
-
+  impl(void* hwnd) : m_locked(false) {
     for (int i=0; i<5; ++i) {
       if (OpenClipboard((HWND)hwnd)) {
-        opened = true;
+        m_locked = true;
         break;
       }
-      Sleep(100);
+      Sleep(20);
     }
 
-    if (!opened) {
+    if (!m_locked) {
       error_handler e = get_error_handler();
       if (e)
         e(CannotLock);
@@ -30,6 +30,10 @@ public:
 
   ~impl() {
     CloseClipboard();
+  }
+
+  bool locked() const {
+    return m_locked;
   }
 
   bool clear() {

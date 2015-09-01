@@ -18,6 +18,13 @@ namespace clip {
     lock(void* native_handle);
     ~lock();
 
+    // Returns true if we've locked the clipboard successfully in
+    // lock() constructor.
+    bool locked() const;
+
+    // Clears the clipboard content. If you don't clear the content,
+    // previous clipboard content (in unknown formats) could persist
+    // after the unlock.
     bool clear();
 
     // Returns true if the clipboard can be converted to the given

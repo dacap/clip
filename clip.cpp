@@ -37,6 +37,10 @@ lock::~lock() {
   delete p;
 }
 
+bool lock::locked() const {
+  return p->locked();
+}
+
 bool lock::clear() {
   return p->clear();
 }
