@@ -12,6 +12,7 @@
 #endif
 
 #include <vector>
+#include <stdexcept>
 
 namespace clip {
 

@@ -1,7 +1,7 @@
 # Clip Library
 # Copyright (C) 2015 David Capello
 
-cmake_minimum_required(VERSION 3.2)
+cmake_minimum_required(VERSION 2.6)
 
 project(clip CXX)
 option(CLIP_EXAMPLES "Compile clip examples" on)
@@ -15,6 +15,10 @@ endif()
 
 if(APPLE)
   list(APPEND CLIP_SOURCES clip_osx.mm)
+endif()
+
+if(UNIX)
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=gnu++11")
 endif()
 
 add_library(clip ${CLIP_SOURCES})
