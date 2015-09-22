@@ -7,6 +7,34 @@
 
 namespace clip {
 
+class Hglobal {
+public:
+  Hglobal() : m_handle(nullptr) {
+  }
+
+  explicit Hglobal(HGLOBAL handle) : m_handle(handle) {
+  }
+
+  explicit Hglobal(size_t len) : m_handle(GlobalAlloc(GHND, len)) {
+  }
+
+  ~Hglobal() {
+    if (m_handle)
+      GlobalFree(m_handle);
+  }
+
+  void release() {
+    m_handle = nullptr;
+  }
+
+  operator HGLOBAL() {
+    return m_handle;
+  }
+
+private:
+  HGLOBAL m_handle;
+};
+
 class lock::impl {
   bool m_locked;
 
@@ -63,27 +91,27 @@ public:
         if (reqsize > 0) {
           ++reqsize;
 
-          HGLOBAL hglobal = GlobalAlloc(GMEM_MOVEABLE |
-                                        GMEM_ZEROINIT, sizeof(WCHAR)*reqsize);
+          Hglobal hglobal(sizeof(WCHAR)*reqsize);
           LPWSTR lpstr = static_cast<LPWSTR>(GlobalLock(hglobal));
           MultiByteToWideChar(CP_UTF8, 0, buf, len, lpstr, reqsize);
           GlobalUnlock(hglobal);
 
-          SetClipboardData(CF_UNICODETEXT, hglobal);
+          if (SetClipboardData(CF_UNICODETEXT, hglobal))
+            hglobal.release();
         }
       }
       result = true;
     }
     else {
-      HGLOBAL hglobal = GlobalAlloc(GHND, len+sizeof(size_t));
+      Hglobal hglobal(len+sizeof(size_t));
       if (hglobal) {
         size_t* dst = (size_t*)GlobalLock(hglobal);
         if (dst) {
           *dst = len;
           memcpy(dst+1, buf, len);
           GlobalUnlock(hglobal);
-          SetClipboardData(f, hglobal);
-          GlobalFree(hglobal);
+          if (SetClipboardData(f, hglobal))
+            hglobal.release();
           result = true;
         }
       }
