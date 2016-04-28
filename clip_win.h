@@ -1,5 +1,5 @@
 // Clip Library
-// Copyright (c) 2015 David Capello
+// Copyright (c) 2015-2016 David Capello
 
 #include <cassert>
 #include <vector>
@@ -235,6 +235,8 @@ format register_format(const std::string& name) {
   MultiByteToWideChar(CP_UTF8, 0, name.c_str(), name.size(),
                       &buf[0], reqsize);
 
+  // From MSDN, registered clipboard formats are identified by values
+  // in the range 0xC000 through 0xFFFF.
   return (format)RegisterClipboardFormatW(&buf[0]);
 }
 
