@@ -148,6 +148,14 @@ size_t lock::impl::get_data_length(format f) const {
   return len;
 }
 
+bool lock::impl::set_image(const image& image) {
+  return false;               // TODO
+}
+
+bool lock::impl::get_image(image& image) const {
+  return false;               // TODO
+}
+
 format register_format(const std::string& name) {
   // Check if the format is already registered
   auto it = g_name_to_format.find(name);

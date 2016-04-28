@@ -17,6 +17,8 @@ public:
   bool set_data(format f, const char* buf, size_t len);
   bool get_data(format f, char* buf, size_t len) const;
   size_t get_data_length(format f) const;
+  bool set_image(const image& image);
+  bool get_image(image& image) const;
 };
 
 } // namespace clip

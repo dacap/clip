@@ -1,5 +1,5 @@
 // Clip Library
-// Copyright (c) 2015 David Capello
+// Copyright (c) 2015-2016 David Capello
 
 #include "clip.h"
 
@@ -61,13 +61,17 @@ size_t lock::get_data_length(format f) const {
   return p->get_data_length(f);
 }
 
-format empty_format() {
-  return 0;
+bool lock::set_image(const image& img) {
+  return p->set_image(img);
 }
 
-format text_format() {
-  return 1;
+bool lock::get_image(image& img) const {
+  return p->get_image(img);
 }
+
+format empty_format() { return 0; }
+format text_format()  { return 1; }
+format image_format() { return 2; }
 
 bool has(format f) {
   lock l(nullptr);
@@ -113,6 +117,26 @@ bool get_text(std::string& value) {
     value.clear();
     return true;
   }
+}
+
+bool set_image(const image& img) {
+  lock l(nullptr);
+  if (!l.locked())
+    return false;
+
+  return l.set_image(img);
+}
+
+bool get_image(image& img) {
+  lock l(nullptr);
+  if (!l.locked())
+    return false;
+
+  format f = image_format();
+  if (!l.is_convertible(f))
+    return false;
+
+  return l.get_image(img);
 }
 
 void set_error_handler(error_handler handler) {

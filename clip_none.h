@@ -59,6 +59,14 @@ public:
       return 0;
   }
 
+  bool set_image(const image& image) {
+    return false;               // TODO
+  }
+
+  bool get_image(image& image) const {
+    return false;               // TODO
+  }
+
 };
 
 format register_format(const std::string& name) {
