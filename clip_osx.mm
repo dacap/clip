@@ -36,12 +36,12 @@ bool lock::impl::is_convertible(format f) const {
 bool lock::impl::set_data(format f, const char* buf, size_t len) {
   if (f == text_format()) {
     NSPasteboard* pasteboard = [NSPasteboard generalPasteboard];
-
-    // TODO check "len" parameter
-
+    NSString* string = [[NSString alloc] initWithBytesNoCopy:(void*)buf
+                                                      length:len
+                                                    encoding:NSUTF8StringEncoding
+                                                freeWhenDone:NO];
     [pasteboard clearContents];
-    [pasteboard setString:[NSString stringWithUTF8String:buf]
-                  forType:NSStringPboardType];
+    [pasteboard setString:string forType:NSStringPboardType];
     return true;
   }
   else
