@@ -1,5 +1,5 @@
 # Clip Library
-# Copyright (C) 2015 David Capello
+# Copyright (C) 2015-2016 David Capello
 
 cmake_minimum_required(VERSION 2.6)
 
@@ -14,6 +14,7 @@ if(WIN32)
 endif()
 
 if(APPLE)
+  add_definitions(-fobjc-arc)
   list(APPEND CLIP_SOURCES clip_osx.mm)
 endif()
 
