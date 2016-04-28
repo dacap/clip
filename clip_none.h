@@ -1,5 +1,5 @@
 // Clip Library
-// Copyright (c) 2015 David Capello
+// Copyright (c) 2015-2016 David Capello
 
 #include <cassert>
 #include <map>
@@ -62,7 +62,7 @@ public:
 };
 
 format register_format(const std::string& name) {
-  return ++g_last_format;
+  return g_last_format++;
 }
 
 } // namespace clip
