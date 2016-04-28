@@ -1,5 +1,5 @@
 // Clip Library
-// Copyright (c) 2015 David Capello
+// Copyright (c) 2015-2016 David Capello
 
 #ifndef CLIP_OSX_H_INCLUDED
 #define CLIP_OSX_H_INCLUDED
@@ -11,6 +11,7 @@ public:
   impl(void*);
   ~impl();
 
+  bool locked() const;
   bool clear();
   bool is_convertible(format f) const;
   bool set_data(format f, const char* buf, size_t len);

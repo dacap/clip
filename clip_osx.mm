@@ -1,5 +1,5 @@
 // Clip Library
-// Copyright (c) 2015 David Capello
+// Copyright (c) 2015-2016 David Capello
 
 #include "clip.h"
 #include "clip_osx.h"
@@ -17,6 +17,10 @@ lock::impl::impl(void*) {
 }
 
 lock::impl::~impl() {
+}
+
+bool lock::impl::locked() const {
+  return true;
 }
 
 bool lock::impl::clear() {
