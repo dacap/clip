@@ -43,7 +43,7 @@ bool lock::impl::is_convertible(format f) const {
   NSString* result = nil;
 
   if (f == text_format()) {
-    result = [pasteboard availableTypeFromArray:[NSArray arrayWithObject:NSStringPboardType]];
+    result = [pasteboard availableTypeFromArray:[NSArray arrayWithObject:NSPasteboardTypeString]];
   }
   else {
     auto it = g_format_to_name.find(f);
@@ -69,7 +69,7 @@ bool lock::impl::set_data(format f, const char* buf, size_t len) {
                                                     encoding:NSUTF8StringEncoding
                                                 freeWhenDone:NO];
     [pasteboard clearContents];
-    [pasteboard setString:string forType:NSStringPboardType];
+    [pasteboard setString:string forType:NSPasteboardTypeString];
     return true;
   }
   else {
@@ -101,7 +101,7 @@ bool lock::impl::get_data(format f, char* buf, size_t len) const {
   NSPasteboard* pasteboard = [NSPasteboard generalPasteboard];
 
   if (f == text_format()) {
-    NSString* string = [pasteboard stringForType:NSStringPboardType];
+    NSString* string = [pasteboard stringForType:NSPasteboardTypeString];
     int reqsize = [string lengthOfBytesUsingEncoding:NSUTF8StringEncoding]+1;
 
     assert(reqsize <= len);
@@ -141,7 +141,7 @@ size_t lock::impl::get_data_length(format f) const {
 
   if (f == text_format()) {
     NSPasteboard* pasteboard = [NSPasteboard generalPasteboard];
-    NSString* string = [pasteboard stringForType:NSStringPboardType];
+    NSString* string = [pasteboard stringForType:NSPasteboardTypeString];
     return [string lengthOfBytesUsingEncoding:NSUTF8StringEncoding]+1;
   }
 
