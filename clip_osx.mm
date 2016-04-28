@@ -56,13 +56,16 @@ bool lock::impl::get_data(format f, char* buf, size_t len) const {
   if (f == text_format()) {
     NSPasteboard* pasteboard = [NSPasteboard generalPasteboard];
     NSString* string = [pasteboard stringForType:NSStringPboardType];
-    int reqsize = [string length]+1;
+    int reqsize = [string lengthOfBytesUsingEncoding:NSUTF8StringEncoding]+1;
 
     assert(reqsize <= len);
     if (reqsize > len) {
       // Buffer is too small
       return false;
     }
+
+    if (reqsize == 0)
+      return true;
 
     memcpy(buf, [string UTF8String], reqsize);
     return true;
@@ -77,7 +80,7 @@ size_t lock::impl::get_data_length(format f) const {
   if (f == text_format()) {
     NSPasteboard* pasteboard = [NSPasteboard generalPasteboard];
     NSString* string = [pasteboard stringForType:NSStringPboardType];
-    return [string length]+1;
+    return [string lengthOfBytesUsingEncoding:NSUTF8StringEncoding]+1;
   }
 
   return len;
