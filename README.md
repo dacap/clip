@@ -7,7 +7,8 @@ Library to copy/retrieve content to/from the clipboard/pasteboard.
 
 ## Features
 
-* Copy/paste UTF-8 text on Windows and Mac OS X.
+* Copy/paste UTF-8 text on Windows and OS X.
+* Copy/paste user-defined data on Windows and OS X.
 
 ## Example
 
@@ -27,7 +28,7 @@ Library to copy/retrieve content to/from the clipboard/pasteboard.
     using namespace clip;
 
     int main() {
-      format my_format = register_format("AppName.FormatName");
+      format my_format = register_format("com.appname.FormatName");
 
       int value = 32;
 
@@ -43,4 +44,4 @@ Library to copy/retrieve content to/from the clipboard/pasteboard.
 
 * Support Linux (GTK? KDE? X11?) clipboard
 * Add support to copy/paste images
-* Add support to copy/paste user-defined formats on OS X and Linux
+* Add support to copy/paste user-defined formats and Linux

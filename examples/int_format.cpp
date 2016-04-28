@@ -1,5 +1,5 @@
 // Clip Library
-// Copyright (c) 2015 David Capello
+// Copyright (c) 2015-2016 David Capello
 
 #include "clip.h"
 #include "random.h"
@@ -9,7 +9,7 @@
 using namespace clip;
 
 int main() {
-  format int_format = register_format("Clip.CustomInt");
+  format int_format = register_format("org.aseprite.clip.CustomInt");
 
   {
     lock l(nullptr);
