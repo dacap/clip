@@ -83,4 +83,9 @@ size_t lock::impl::get_data_length(format f) const {
   return len;
 }
 
+format register_format(const std::string& name) {
+  // TODO register new formats
+  return empty_format();
+}
+
 } // namespace clip
