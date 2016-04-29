@@ -40,7 +40,7 @@ namespace {
         (bitmap.planar)) {
       error_handler e = get_error_handler();
       if (e)
-        e(PixelFormatNotSupported);
+        e(ErrorCode::ImageNotSupported);
       return false;
     }
 

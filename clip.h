@@ -72,9 +72,9 @@ namespace clip {
   // Error handling
   // ======================================================================
 
-  enum ErrorCode {
+  enum class ErrorCode {
     CannotLock,
-    PixelFormatNotSupported,
+    ImageNotSupported,
   };
 
   typedef void (*error_handler)(ErrorCode code);

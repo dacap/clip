@@ -23,7 +23,7 @@ void default_error_handler(ErrorCode code) {
     "Cannot lock clipboard",
     "Image format is not supported"
   };
-  throw std::runtime_error(err[code]);
+  throw std::runtime_error(err[static_cast<int>(code)]);
 }
 
 } // anonymous namespace

@@ -70,7 +70,7 @@ lock::impl::impl(void* hwnd) : m_locked(false) {
   if (!m_locked) {
     error_handler e = get_error_handler();
     if (e)
-      e(CannotLock);
+      e(ErrorCode::CannotLock);
   }
 }
 
@@ -301,7 +301,7 @@ bool lock::impl::set_image(const image& image) {
     default:
       error_handler e = get_error_handler();
       if (e)
-        e(PixelFormatNotSupported);
+        e(ErrorCode::ImageNotSupported);
       return false;
   }
 
@@ -323,7 +323,7 @@ bool lock::impl::get_image(image& output_img) const {
       bi->bmiHeader.biCompression != BI_BITFIELDS) {
     error_handler e = get_error_handler();
     if (e)
-      e(PixelFormatNotSupported);
+      e(ErrorCode::ImageNotSupported);
     return false;
   }
 
