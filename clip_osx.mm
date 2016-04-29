@@ -237,15 +237,29 @@ bool lock::impl::get_data(format f, char* buf, size_t len) const {
 }
 
 size_t lock::impl::get_data_length(format f) const {
-  size_t len = 0;
+  NSPasteboard* pasteboard = [NSPasteboard generalPasteboard];
 
   if (f == text_format()) {
-    NSPasteboard* pasteboard = [NSPasteboard generalPasteboard];
     NSString* string = [pasteboard stringForType:NSPasteboardTypeString];
     return [string lengthOfBytesUsingEncoding:NSUTF8StringEncoding]+1;
   }
 
-  return len;
+  auto it = g_format_to_name.find(f);
+  if (it == g_format_to_name.end())
+    return 0;
+
+  const std::string& formatName = it->second;
+  NSString* typeString =
+    [[NSString alloc] initWithBytesNoCopy:(void*)formatName.c_str()
+                                   length:formatName.size()
+                                 encoding:NSUTF8StringEncoding
+                             freeWhenDone:NO];
+
+  NSData* data = [pasteboard dataForType:typeString];
+  if (!data)
+    return 0;
+
+  return data.length;
 }
 
 bool lock::impl::set_image(const image& image) {
