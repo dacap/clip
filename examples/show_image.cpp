@@ -13,16 +13,17 @@ static void print_channel(const image& img,
                           const std::string& channel_name,
                           const int channel_mask,
                           const int channel_shift,
-                          const int channel_fill_width) {
+                          const int channel_fill_width,
+                          const int pixel_size) {
   std::cout << channel_name << ":\n";
   for (int y=0; y<spec.height; ++y) {
-    const T* p = (const T*)((char*)img.data()+spec.bytes_per_row*y);
+    const char* p = (img.data()+spec.bytes_per_row*y);
     std::cout << "  ";
-    for (int x=0; x<spec.width; ++x, ++p) {
+    for (int x=0; x<spec.width; ++x, p += pixel_size) {
       std::cout << std::right
                 << std::hex
                 << std::setw(channel_fill_width)
-                << (((*p) & channel_mask) >> channel_shift) << " ";
+                << (((*((T*)p)) & channel_mask) >> channel_shift) << " ";
     }
     std::cout << "\n";
   }
@@ -31,11 +32,13 @@ static void print_channel(const image& img,
 template<typename T>
 static void print_channels(const image& img,
                            const image_spec& spec,
-                           const int channel_fill_width) {
-  print_channel<T>(img, spec, "Red",   spec.red_mask,   spec.red_shift,   channel_fill_width);
-  print_channel<T>(img, spec, "Green", spec.green_mask, spec.green_shift, channel_fill_width);
-  print_channel<T>(img, spec, "Blue",  spec.blue_mask,  spec.blue_shift,  channel_fill_width);
-  print_channel<T>(img, spec, "Alpha", spec.alpha_mask, spec.alpha_shift, channel_fill_width);
+                           const int channel_fill_width,
+                           int pixel_size = sizeof(T)) {
+  print_channel<T>(img, spec, "Red",   spec.red_mask,   spec.red_shift,   channel_fill_width, pixel_size);
+  print_channel<T>(img, spec, "Green", spec.green_mask, spec.green_shift, channel_fill_width, pixel_size);
+  print_channel<T>(img, spec, "Blue",  spec.blue_mask,  spec.blue_shift,  channel_fill_width, pixel_size);
+  if (spec.alpha_mask)
+    print_channel<T>(img, spec, "Alpha", spec.alpha_mask, spec.alpha_shift, channel_fill_width, pixel_size);
 }
 
 int main() {
@@ -79,8 +82,9 @@ int main() {
   }
 
   switch (spec.bits_per_pixel) {
-    case 16: print_channels<uint16_t>(img, spec, 2); break;
-    case 32: print_channels<uint32_t>(img, spec, 2); break;
-    case 64: print_channels<uint64_t>(img, spec, 4); break;
+    case 16: print_channels<uint16_t>(img, spec, 2);    break;
+    case 24: print_channels<uint32_t>(img, spec, 2, 3); break;
+    case 32: print_channels<uint32_t>(img, spec, 2);    break;
+    case 64: print_channels<uint64_t>(img, spec, 4);    break;
   }
 }
