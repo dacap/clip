@@ -11,6 +11,7 @@ set(CLIP_SOURCES clip.cpp)
 
 if(WIN32)
   add_definitions(-D_SCL_SECURE_NO_WARNINGS)
+  list(APPEND CLIP_SOURCES clip_win.cpp)
 endif()
 
 if(APPLE)
