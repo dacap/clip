@@ -153,7 +153,57 @@ size_t lock::impl::get_data_length(format f) const {
 }
 
 bool lock::impl::set_image(const image& image) {
-  return false;               // TODO
+  NSPasteboard* pasteboard = [NSPasteboard generalPasteboard];
+  const image_spec& spec = image.spec();
+
+  NSBitmapFormat bitmapFormat = 0;
+  int samples_per_pixel = 0;
+  if (spec.alpha_mask) {
+    samples_per_pixel = 4;
+    if (spec.alpha_shift == 0)
+      bitmapFormat |= NSAlphaFirstBitmapFormat;
+    bitmapFormat |= NSAlphaNonpremultipliedBitmapFormat;
+  }
+  else if (spec.red_mask || spec.green_mask || spec.blue_mask) {
+    samples_per_pixel = 3;
+  }
+  else {
+    samples_per_pixel = 1;
+  }
+
+  if (spec.bits_per_pixel == 32)
+    bitmapFormat |= NS32BitLittleEndianBitmapFormat;
+  else if (spec.bits_per_pixel == 16)
+    bitmapFormat |= NS16BitLittleEndianBitmapFormat;
+
+  std::vector<unsigned char*> planes(1);
+  planes[0] = (unsigned char*)image.data();
+
+  NSBitmapImageRep* bitmap =
+    [[NSBitmapImageRep alloc]
+      initWithBitmapDataPlanes:&planes[0]
+                    pixelsWide:spec.width
+                    pixelsHigh:spec.height
+                 bitsPerSample:spec.bits_per_pixel / samples_per_pixel
+               samplesPerPixel:samples_per_pixel
+                      hasAlpha:(spec.alpha_mask ? YES: NO)
+                      isPlanar:NO
+                colorSpaceName:NSDeviceRGBColorSpace
+                  bitmapFormat:bitmapFormat
+                   bytesPerRow:spec.bytes_per_row
+                  bitsPerPixel:spec.bits_per_pixel];
+  if (!bitmap)
+    return false;
+
+  NSData* data = bitmap.TIFFRepresentation;
+  if (!data)
+    return false;
+
+  [pasteboard clearContents];
+  if ([pasteboard setData:data forType:NSPasteboardTypeTIFF])
+    return true;
+
+  return false;
 }
 
 bool lock::impl::get_image(image& output_img) const {
@@ -236,7 +286,7 @@ bool lock::impl::get_image(image& output_img) const {
   }
 
   unsigned long size = spec.bytes_per_row*spec.height;
-  image img(new char[size], true, spec);
+  image img(spec);
 
   std::copy(bitmap.bitmapData,
             bitmap.bitmapData+size, img.data());

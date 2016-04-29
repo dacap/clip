@@ -111,12 +111,19 @@ namespace clip {
   class image {
   public:
     // Constructor to use get_image()
-    image() : m_data(nullptr), m_own_data(false) {
+    image() : m_own_data(false), m_data(nullptr) {
     }
 
-    // Constructor to use set_image()
-    image(char* data, bool own_data, const image_spec& spec)
-      : m_data(data), m_own_data(own_data), m_spec(spec) {
+    // Constructors to use set_image()
+    image(const image_spec& spec)
+      : m_own_data(true),
+        m_data(new char[spec.bytes_per_row*spec.height]),
+        m_spec(spec) {
+    }
+    image(const void* data, const image_spec& spec)
+      : m_own_data(false),
+        m_data((char*)data),
+        m_spec(spec) {
     }
 
     ~image() {
@@ -130,8 +137,8 @@ namespace clip {
     const image_spec& spec() const { return m_spec; }
 
   private:
-    char* m_data;
     bool m_own_data;
+    char* m_data;
     image_spec m_spec;
   };
 
