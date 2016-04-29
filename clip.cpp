@@ -20,7 +20,8 @@ namespace {
 
 void default_error_handler(ErrorCode code) {
   static const char* err[] = {
-    "Cannot lock clipboard"
+    "Cannot lock clipboard",
+    "Image format is not supported"
   };
   throw std::runtime_error(err[code]);
 }
