@@ -249,7 +249,7 @@ size_t lock::impl::get_data_length(format f) const {
 
 bool lock::impl::set_image(const image& image) {
   const image_spec& spec = image.spec();
-  image_spec output_spec = spec;
+  image_spec out_spec = spec;
 
   int palette_colors = 0;
   int padding = 0;
@@ -258,7 +258,7 @@ bool lock::impl::set_image(const image& image) {
     case 16: padding = ((4-((spec.width*2)&3))&3)/2; break;
     case 8:  padding = (4-(spec.width&3))&3; break;
   }
-  output_spec.bytes_per_row += padding;
+  out_spec.bytes_per_row += padding;
 
   // Create the BITMAPV5HEADER structure
   Hglobal hmem(
@@ -266,22 +266,31 @@ bool lock::impl::set_image(const image& image) {
       GHND,
       sizeof(BITMAPV5HEADER)
       + palette_colors*sizeof(RGBQUAD)
-      + output_spec.bytes_per_row*output_spec.height));
+      + out_spec.bytes_per_row*out_spec.height));
   if (!hmem)
     return false;
 
+  out_spec.red_mask    = 0x00ff0000;
+  out_spec.green_mask  = 0xff00;
+  out_spec.blue_mask   = 0xff;
+  out_spec.alpha_mask  = 0xff000000;
+  out_spec.red_shift   = 16;
+  out_spec.green_shift = 8;
+  out_spec.blue_shift  = 0;
+  out_spec.alpha_shift = 24;
+
   BITMAPV5HEADER* bi = (BITMAPV5HEADER*)GlobalLock(hmem);
   bi->bV5Size = sizeof(BITMAPV5HEADER);
-  bi->bV5Width = output_spec.width;
-  bi->bV5Height = output_spec.height;
+  bi->bV5Width = out_spec.width;
+  bi->bV5Height = out_spec.height;
   bi->bV5Planes = 1;
-  bi->bV5BitCount = (WORD)output_spec.bits_per_pixel;
+  bi->bV5BitCount = (WORD)out_spec.bits_per_pixel;
   bi->bV5Compression = BI_RGB;
-  bi->bV5SizeImage = output_spec.bytes_per_row*spec.height;
-  bi->bV5RedMask   = output_spec.red_mask;
-  bi->bV5GreenMask = output_spec.green_mask;
-  bi->bV5BlueMask  = output_spec.blue_mask;
-  bi->bV5AlphaMask = output_spec.alpha_mask;
+  bi->bV5SizeImage = out_spec.bytes_per_row*spec.height;
+  bi->bV5RedMask   = out_spec.red_mask;
+  bi->bV5GreenMask = out_spec.green_mask;
+  bi->bV5BlueMask  = out_spec.blue_mask;
+  bi->bV5AlphaMask = out_spec.alpha_mask;
   bi->bV5CSType = LCS_WINDOWS_COLOR_SPACE;
   bi->bV5Intent = LCS_GM_GRAPHICS;
   bi->bV5ClrUsed = 0;
@@ -290,11 +299,23 @@ bool lock::impl::set_image(const image& image) {
     case 32: {
       const char* src = image.data();
       char* dst = (((char*)bi)+bi->bV5Size)
-        + (output_spec.height-1)*output_spec.bytes_per_row;
+        + (out_spec.height-1)*out_spec.bytes_per_row;
       for (long y=spec.height-1; y>=0; --y) {
-        std::copy(src, src+spec.bytes_per_row, dst);
+        // std::copy(src, src+spec.bytes_per_row, dst);
+        const uint32_t* src_x = (const uint32_t*)src;
+        uint32_t* dst_x = (uint32_t*)dst;
+
+        for (unsigned long x=0; x<spec.width; ++x, ++src_x, ++dst_x) {
+          uint32_t c = *src_x;
+          *dst_x =
+            (((c & spec.red_mask  ) >> spec.red_shift  ) << out_spec.red_shift  ) |
+            (((c & spec.green_mask) >> spec.green_shift) << out_spec.green_shift) |
+            (((c & spec.blue_mask ) >> spec.blue_shift ) << out_spec.blue_shift ) |
+            (((c & spec.alpha_mask) >> spec.alpha_shift) << out_spec.alpha_shift);
+        }
+
         src += spec.bytes_per_row;
-        dst -= output_spec.bytes_per_row;
+        dst -= out_spec.bytes_per_row;
       }
       break;
     }
