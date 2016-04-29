@@ -69,6 +69,10 @@ bool lock::get_image(image& img) const {
   return p->get_image(img);
 }
 
+bool lock::get_image_spec(image_spec& spec) const {
+  return p->get_image_spec(spec);
+}
+
 format empty_format() { return 0; }
 format text_format()  { return 1; }
 format image_format() { return 2; }
@@ -137,6 +141,18 @@ bool get_image(image& img) {
     return false;
 
   return l.get_image(img);
+}
+
+bool get_image_spec(image_spec& spec) {
+  lock l(nullptr);
+  if (!l.locked())
+    return false;
+
+  format f = image_format();
+  if (!l.is_convertible(f))
+    return false;
+
+  return l.get_image_spec(spec);
 }
 
 void set_error_handler(error_handler handler) {

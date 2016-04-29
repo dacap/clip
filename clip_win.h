@@ -234,6 +234,10 @@ public:
     return false;               // TODO
   }
 
+  bool get_image_spec(image_spec& spec) const {
+    return false;               // TODO
+  }
+
 };
 
 format register_format(const std::string& name) {

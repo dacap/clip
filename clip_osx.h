@@ -19,6 +19,7 @@ public:
   size_t get_data_length(format f) const;
   bool set_image(const image& image);
   bool get_image(image& image) const;
+  bool get_image_spec(image_spec& spec) const;
 };
 
 } // namespace clip

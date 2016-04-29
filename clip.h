@@ -18,6 +18,7 @@ namespace clip {
   typedef size_t format;
 
   class image;
+  struct image_spec;
 
   class lock {
   public:
@@ -43,6 +44,7 @@ namespace clip {
     // For images
     bool set_image(const image& image);
     bool get_image(image& image) const;
+    bool get_image_spec(image_spec& spec) const;
 
   private:
     class impl;
@@ -146,6 +148,7 @@ namespace clip {
   // functions returns false in case of error.
   bool set_image(const image& img);
   bool get_image(image& img);
+  bool get_image_spec(image_spec& spec);
 
 } // namespace clip
 
