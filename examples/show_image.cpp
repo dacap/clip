@@ -16,10 +16,10 @@ static void print_channel(const image& img,
                           const int channel_fill_width,
                           const int pixel_size) {
   std::cout << channel_name << ":\n";
-  for (int y=0; y<spec.height; ++y) {
+  for (unsigned long y=0; y<spec.height; ++y) {
     const char* p = (img.data()+spec.bytes_per_row*y);
     std::cout << "  ";
-    for (int x=0; x<spec.width; ++x, p += pixel_size) {
+    for (unsigned long x=0; x<spec.width; ++x, p += pixel_size) {
       std::cout << std::right
                 << std::hex
                 << std::setw(channel_fill_width)
@@ -71,11 +71,11 @@ int main() {
             << "  Alpha shift: " << spec.alpha_shift << "\n";
 
   std::cout << "Bytes:\n";
-  for (int y=0; y<spec.height; ++y) {
+  for (unsigned long y=0; y<spec.height; ++y) {
     char* p = img.data()+spec.bytes_per_row*y;
     std::cout << "  ";
-    for (int x=0; x<spec.width; ++x) {
-      for (int byte=0; byte<spec.bits_per_pixel/8; ++byte, ++p)
+    for (unsigned long x=0; x<spec.width; ++x) {
+      for (unsigned long byte=0; byte<spec.bits_per_pixel/8; ++byte, ++p)
         std::cout << std::right << std::hex << std::setfill('0') << std::setw(2) << int((*p) & 0xff) << " ";
     }
     std::cout << "\n";
