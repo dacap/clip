@@ -98,6 +98,7 @@ bool set_text(const std::string& value) {
   if (!l.locked())
     return false;
 
+  l.clear();
   return l.set_data(text_format(), value.c_str(), value.size()+1);
 }
 
@@ -128,6 +129,7 @@ bool set_image(const image& img) {
   if (!l.locked())
     return false;
 
+  l.clear();
   return l.set_image(img);
 }
 

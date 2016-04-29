@@ -170,7 +170,6 @@ bool lock::impl::set_data(format f, const char* buf, size_t len) {
                                                       length:len
                                                     encoding:NSUTF8StringEncoding
                                                 freeWhenDone:NO];
-    [pasteboard clearContents];
     [pasteboard setString:string forType:NSPasteboardTypeString];
     return true;
   }
@@ -187,7 +186,6 @@ bool lock::impl::set_data(format f, const char* buf, size_t len) {
                                           length:len
                                       freeWhenDone:NO];
 
-      [pasteboard clearContents];
       if ([pasteboard setData:data forType:typeString])
         return true;
     }
@@ -297,7 +295,6 @@ bool lock::impl::set_image(const image& image) {
   if (!data)
     return false;
 
-  [pasteboard clearContents];
   if ([pasteboard setData:data forType:NSPasteboardTypeTIFF])
     return true;
 
