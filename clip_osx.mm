@@ -329,15 +329,6 @@ format register_format(const std::string& name) {
   if (it != g_name_to_format.end())
     return it->second;
 
-  NSPasteboard* pasteboard = [NSPasteboard generalPasteboard];
-  NSString* string = [[NSString alloc] initWithBytesNoCopy:(void*)name.c_str()
-                                                    length:name.size()
-                                                  encoding:NSUTF8StringEncoding
-                                              freeWhenDone:NO];
-
-  [pasteboard declareTypes:[NSArray arrayWithObject:string]
-                     owner:NSApp];
-
   format new_format = g_last_format++;
   g_name_to_format[name] = new_format;
   g_format_to_name[new_format] = name;
