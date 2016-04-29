@@ -8,6 +8,14 @@
 #include <vector>
 #include <windows.h>
 
+#ifndef LCS_WINDOWS_COLOR_SPACE
+#define LCS_WINDOWS_COLOR_SPACE 'Win '
+#endif
+
+#ifndef CF_DIBV5
+#define CF_DIBV5            17
+#endif
+
 namespace clip {
 
 namespace {
@@ -240,7 +248,66 @@ size_t lock::impl::get_data_length(format f) const {
 }
 
 bool lock::impl::set_image(const image& image) {
-  return false;               // TODO
+  const image_spec& spec = image.spec();
+  image_spec output_spec = spec;
+
+  int palette_colors = 0;
+  int padding = 0;
+  switch (spec.bits_per_pixel) {
+    case 24: padding = (4-((spec.width*3)&3))&3; break;
+    case 16: padding = ((4-((spec.width*2)&3))&3)/2; break;
+    case 8:  padding = (4-(spec.width&3))&3; break;
+  }
+  output_spec.bytes_per_row += padding;
+
+  // Create the BITMAPV5HEADER structure
+  Hglobal hmem(
+    GlobalAlloc(
+      GHND,
+      sizeof(BITMAPV5HEADER)
+      + palette_colors*sizeof(RGBQUAD)
+      + output_spec.bytes_per_row*output_spec.height));
+  if (!hmem)
+    return false;
+
+  BITMAPV5HEADER* bi = (BITMAPV5HEADER*)GlobalLock(hmem);
+  bi->bV5Size = sizeof(BITMAPV5HEADER);
+  bi->bV5Width = output_spec.width;
+  bi->bV5Height = output_spec.height;
+  bi->bV5Planes = 1;
+  bi->bV5BitCount = (WORD)output_spec.bits_per_pixel;
+  bi->bV5Compression = BI_RGB;
+  bi->bV5SizeImage = output_spec.bytes_per_row*spec.height;
+  bi->bV5RedMask   = output_spec.red_mask;
+  bi->bV5GreenMask = output_spec.green_mask;
+  bi->bV5BlueMask  = output_spec.blue_mask;
+  bi->bV5AlphaMask = output_spec.alpha_mask;
+  bi->bV5CSType = LCS_WINDOWS_COLOR_SPACE;
+  bi->bV5Intent = LCS_GM_GRAPHICS;
+  bi->bV5ClrUsed = 0;
+
+  switch (spec.bits_per_pixel) {
+    case 32: {
+      const char* src = image.data();
+      char* dst = (((char*)bi)+bi->bV5Size)
+        + (output_spec.height-1)*output_spec.bytes_per_row;
+      for (long y=spec.height-1; y>=0; --y) {
+        std::copy(src, src+spec.bytes_per_row, dst);
+        src += spec.bytes_per_row;
+        dst -= output_spec.bytes_per_row;
+      }
+      break;
+    }
+    default:
+      error_handler e = get_error_handler();
+      if (e)
+        e(PixelFormatNotSupported);
+      return false;
+  }
+
+  GlobalUnlock(hmem);
+  SetClipboardData(CF_DIBV5, hmem);
+  return true;
 }
 
 bool lock::impl::get_image(image& output_img) const {

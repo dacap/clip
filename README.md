@@ -8,6 +8,7 @@ Library to copy/retrieve content to/from the clipboard/pasteboard.
 ## Features
 
 * Copy/paste UTF-8 text on Windows and OS X.
+* Copy/paste RGB/RGBA images on Windows and OS X.
 * Copy/paste user-defined data on Windows and OS X.
 
 ## Example
@@ -43,5 +44,5 @@ Library to copy/retrieve content to/from the clipboard/pasteboard.
 ## To-do
 
 * Support Linux (GTK? KDE? X11?) clipboard
-* Add support to copy/paste images
-* Add support to copy/paste user-defined formats and Linux
+* Add support to copy/paste images on Linux
+* Add support to copy/paste user-defined formats on Linux
