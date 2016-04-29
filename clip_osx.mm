@@ -45,6 +45,10 @@ bool lock::impl::is_convertible(format f) const {
   if (f == text_format()) {
     result = [pasteboard availableTypeFromArray:[NSArray arrayWithObject:NSPasteboardTypeString]];
   }
+  else if (f == image_format()) {
+    result = [pasteboard availableTypeFromArray:
+      [NSArray arrayWithObjects:NSPasteboardTypeTIFF,NSPasteboardTypePNG,nil]];
+  }
   else {
     auto it = g_format_to_name.find(f);
     if (it != g_format_to_name.end()) {
@@ -152,8 +156,94 @@ bool lock::impl::set_image(const image& image) {
   return false;               // TODO
 }
 
-bool lock::impl::get_image(image& image) const {
-  return false;               // TODO
+bool lock::impl::get_image(image& output_img) const {
+  NSPasteboard* pasteboard = [NSPasteboard generalPasteboard];
+  NSString* result = [pasteboard availableTypeFromArray:
+    [NSArray arrayWithObjects:NSPasteboardTypeTIFF,NSPasteboardTypePNG,nil]];
+
+  if (!result)
+    return false;
+
+  NSData* data = [pasteboard dataForType:result];
+  if (!data)
+    return false;
+
+  NSBitmapImageRep* bitmap = [NSBitmapImageRep imageRepWithData:data];
+
+  if ((bitmap.bitmapFormat & NSFloatingPointSamplesBitmapFormat) ||
+      (bitmap.planar)) {
+    error_handler e = get_error_handler();
+    if (e)
+      e(PixelFormatNotSupported);
+    return false;
+  }
+
+  image_spec spec;
+  memset(&spec, 0, sizeof(spec));
+  spec.width = bitmap.pixelsWide;
+  spec.height = bitmap.pixelsHigh;
+  spec.bits_per_pixel = bitmap.bitsPerPixel;
+  spec.bytes_per_row = bitmap.bytesPerRow;
+
+  // We need three samples for Red/Green/Blue
+  if (bitmap.samplesPerPixel >= 3) {
+    int bits_per_sample = bitmap.bitsPerPixel / bitmap.samplesPerPixel;
+    int bits_shift = 0;
+
+    // With alpha
+    if (bitmap.alpha) {
+      if (bitmap.bitmapFormat & NSAlphaFirstBitmapFormat) {
+        spec.alpha_shift = 0;
+        bits_shift += bits_per_sample;
+      }
+      else {
+        spec.alpha_shift = 3*bits_per_sample;
+      }
+    }
+
+    unsigned long* masks = &spec.red_mask;
+    unsigned long* shifts = &spec.red_shift;
+
+    // Red/green/blue shifts
+    for (unsigned long* shift=shifts; shift<shifts+3; ++shift) {
+      *shift = bits_shift;
+      bits_shift += bits_per_sample;
+    }
+
+    // Without alpha
+    if (bitmap.alpha) {
+      if (bitmap.bitmapFormat & NS16BitBigEndianBitmapFormat ||
+          bitmap.bitmapFormat & NS32BitBigEndianBitmapFormat) {
+        std::swap(spec.red_shift, spec.alpha_shift);
+        std::swap(spec.green_shift, spec.blue_shift);
+      }
+    }
+    // Without alpha
+    else {
+      if (bitmap.bitmapFormat & NS16BitBigEndianBitmapFormat ||
+          bitmap.bitmapFormat & NS32BitBigEndianBitmapFormat) {
+        std::swap(spec.red_shift, spec.blue_shift);
+      }
+    }
+
+    // Calculate all masks
+    for (unsigned long* shift=shifts, *mask=masks; shift<shifts+4; ++shift, ++mask)
+      *mask = ((1ul<<bits_per_sample)-1ul) << (*shift);
+
+    // Without alpha
+    if (!bitmap.alpha)
+      spec.alpha_mask = 0;
+  }
+
+  unsigned long size = spec.bytes_per_row*spec.height;
+  image img(new char[size], true, spec);
+
+  std::copy(bitmap.bitmapData,
+            bitmap.bitmapData+size, img.data());
+
+  std::swap(output_img, img);
+
+  return true;
 }
 
 format register_format(const std::string& name) {

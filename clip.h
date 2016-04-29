@@ -72,6 +72,7 @@ namespace clip {
 
   enum ErrorCode {
     CannotLock,
+    PixelFormatNotSupported,
   };
 
   typedef void (*error_handler)(ErrorCode code);
@@ -92,49 +93,46 @@ namespace clip {
   // Image
   // ======================================================================
 
+  struct image_spec {
+    unsigned long width;
+    unsigned long height;
+    unsigned long bits_per_pixel;
+    unsigned long bytes_per_row;
+    unsigned long red_mask;
+    unsigned long green_mask;
+    unsigned long blue_mask;
+    unsigned long alpha_mask;
+    unsigned long red_shift;
+    unsigned long green_shift;
+    unsigned long blue_shift;
+    unsigned long alpha_shift;
+  };
+
   class image {
   public:
     // Constructor to use get_image()
-    image()
-      : m_data(nullptr),
-        m_width(0),
-        m_height(0),
-        m_rowstride(0) {
+    image() : m_data(nullptr), m_own_data(false) {
     }
 
     // Constructor to use set_image()
-    image(char* data, int width, int height,
-          int rowstride)
-      : m_data(data),
-        m_width(width),
-        m_height(height),
-        m_rowstride(rowstride) {
+    image(char* data, bool own_data, const image_spec& spec)
+      : m_data(data), m_own_data(own_data), m_spec(spec) {
+    }
+
+    ~image() {
+      if (m_own_data) {
+        delete[] m_data;
+        m_data = nullptr;
+      }
     }
 
     char* data() const { return m_data; }
-    int width() const { return m_width; }
-    int height() const { return m_height; }
-    int rowstride() const { return m_rowstride; }
-
-    template<typename T>
-    T get_pixel(int x, int y) {
-      assert(x >= 0 && x < m_width);
-      assert(y >= 0 && y < m_height);
-      return *(static_cast<T*>((static_cast<char*>(m_data)+m_rowstride*y))+x);
-    }
-
-    template<typename T>
-    void put_pixel(int x, int y, T color) {
-      assert(x >= 0 && x < m_width);
-      assert(y >= 0 && y < m_height);
-      *(static_cast<T*>((static_cast<char*>(m_data)+m_rowstride*y))+x) = color;
-    }
+    const image_spec& spec() const { return m_spec; }
 
   private:
     char* m_data;
-    int m_width;
-    int m_height;
-    int m_rowstride;
+    bool m_own_data;
+    image_spec m_spec;
   };
 
   // High-level API to set/get an image in/from the clipboard. These
