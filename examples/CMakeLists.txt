@@ -6,6 +6,7 @@ function(add_example name)
   target_link_libraries(${name} clip)
 endfunction()
 
+add_example(copy)
 add_example(helloworld)
 add_example(int_format)
 add_example(paste)
