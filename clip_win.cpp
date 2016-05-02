@@ -2,7 +2,7 @@
 // Copyright (c) 2015-2016 David Capello
 
 #include "clip.h"
-#include "clip/clip_win.h"
+#include "clip_win.h"
 
 #include <cassert>
 #include <vector>
