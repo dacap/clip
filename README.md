@@ -26,16 +26,17 @@ Library to copy/retrieve content to/from the clipboard/pasteboard.
 
 ## User-defined clipboard formats
 
-    using namespace clip;
+    #include "clip.h"
 
     int main() {
-      format my_format = register_format("com.appname.FormatName");
+      clip::format my_format =
+        clip::register_format("com.appname.FormatName");
 
       int value = 32;
 
-      lock l;
+      clip::lock l;
       l.clear();
-      l.set_data(text_format(), "Alternative text for value 32");
+      l.set_data(clip::text_format(), "Alternative text for value 32");
       l.set_data(my_format, &value, sizeof(int));
     }
 
