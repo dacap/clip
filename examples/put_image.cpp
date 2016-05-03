@@ -3,16 +3,13 @@
 
 #include "clip.h"
 #include <iostream>
-#include <iomanip>
-
-using namespace clip;
 
 int main() {
   uint32_t data[] = {
     0xffff0000, 0xff00ff00, 0xff0000ff,
     0x7fff0000, 0x7f00ff00, 0x7f0000ff,
   };
-  image_spec spec;
+  clip::image_spec spec;
   spec.width = 3;
   spec.height = 2;
   spec.bits_per_pixel = 32;
@@ -25,6 +22,6 @@ int main() {
   spec.green_shift = 8;
   spec.blue_shift = 16;
   spec.alpha_shift = 24;
-  image img(data, spec);
-  set_image(img);
+  clip::image img(data, spec);
+  clip::set_image(img);
 }

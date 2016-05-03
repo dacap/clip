@@ -5,11 +5,9 @@
 #include <iostream>
 #include <iomanip>
 
-using namespace clip;
-
 template<typename T>
-static void print_channel(const image& img,
-                          const image_spec& spec,
+static void print_channel(const clip::image& img,
+                          const clip::image_spec& spec,
                           const std::string& channel_name,
                           const int channel_mask,
                           const int channel_shift,
@@ -30,8 +28,8 @@ static void print_channel(const image& img,
 }
 
 template<typename T>
-static void print_channels(const image& img,
-                           const image_spec& spec,
+static void print_channels(const clip::image& img,
+                           const clip::image_spec& spec,
                            const int channel_fill_width,
                            int pixel_size = sizeof(T)) {
   print_channel<T>(img, spec, "Red",   spec.red_mask,   spec.red_shift,   channel_fill_width, pixel_size);
@@ -42,18 +40,18 @@ static void print_channels(const image& img,
 }
 
 int main() {
-  if (!has(image_format())) {
+  if (!clip::has(clip::image_format())) {
     std::cout << "Clipboard doesn't contain an image\n";
     return 1;
   }
 
-  image img;
-  if (!get_image(img)) {
+  clip::image img;
+  if (!clip::get_image(img)) {
     std::cout << "Error getting image from clipboard\n";
     return 1;
   }
 
-  image_spec spec = img.spec();
+  clip::image_spec spec = img.spec();
 
   std::cout << "Image in clipboard "
             << spec.width << "x" << spec.height

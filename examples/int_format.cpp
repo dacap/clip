@@ -6,13 +6,11 @@
 #include <cassert>
 #include <iostream>
 
-using namespace clip;
-
 int main() {
-  format int_format = register_format("org.aseprite.clip.CustomInt");
+  clip::format int_format = clip::register_format("org.aseprite.clip.CustomInt");
 
   {
-    lock l(nullptr);
+    clip::lock l(nullptr);
     if (l.is_convertible(int_format)) {
       int data = 0;
       if (l.get_data(int_format, (char*)&data, sizeof(int)))
@@ -24,7 +22,7 @@ int main() {
 
   int newData = RandomInt(0, 9999).generate();
   {
-    lock l(nullptr);
+    clip::lock l(nullptr);
     l.clear();
     l.set_data(int_format, (const char*)&newData, sizeof(int));
 
@@ -32,7 +30,7 @@ int main() {
   }
 
   {
-    lock l(nullptr);
+    clip::lock l(nullptr);
 
     int data = 0;
     l.get_data(int_format, (char*)&data, sizeof(int));
