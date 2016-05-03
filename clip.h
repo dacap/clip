@@ -22,6 +22,12 @@ namespace clip {
 
   class lock {
   public:
+    // You can give your current HWND as the "native_window_handle."
+    // Windows clipboard functions use this handle to open/close
+    // (lock/unlock) the clipboard. From the MSDN documentation we
+    // need this handler so SetClipboardData() doesn't fail after a
+    // EmptyClipboard() call. Anyway it looks to work just fine if we
+    // call OpenClipboard() with a null HWND.
     lock(void* native_window_handle = nullptr);
     ~lock();
 
