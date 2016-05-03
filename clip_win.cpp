@@ -117,11 +117,11 @@ bool lock::impl::set_data(format f, const char* buf, size_t len) {
         MultiByteToWideChar(CP_UTF8, 0, buf, len, lpstr, reqsize);
         GlobalUnlock(hglobal);
 
-        if (SetClipboardData(CF_UNICODETEXT, hglobal))
+        result = (SetClipboardData(CF_UNICODETEXT, hglobal)) ? true: false;
+        if (result)
           hglobal.release();
       }
     }
-    result = true;
   }
   else {
     Hglobal hglobal(len+sizeof(size_t));
@@ -131,9 +131,9 @@ bool lock::impl::set_data(format f, const char* buf, size_t len) {
         *dst = len;
         memcpy(dst+1, buf, len);
         GlobalUnlock(hglobal);
-        if (SetClipboardData(f, hglobal))
+        result = (SetClipboardData(f, hglobal) ? true: false);
+        if (result)
           hglobal.release();
-        result = true;
       }
     }
   }
