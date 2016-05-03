@@ -10,7 +10,7 @@ int main() {
   clip::format int_format = clip::register_format("org.aseprite.clip.CustomInt");
 
   {
-    clip::lock l(nullptr);
+    clip::lock l;
     if (l.is_convertible(int_format)) {
       int data = 0;
       if (l.get_data(int_format, (char*)&data, sizeof(int)))
@@ -22,7 +22,7 @@ int main() {
 
   int newData = RandomInt(0, 9999).generate();
   {
-    clip::lock l(nullptr);
+    clip::lock l;
     l.clear();
     l.set_data(int_format, (const char*)&newData, sizeof(int));
 
@@ -30,7 +30,7 @@ int main() {
   }
 
   {
-    clip::lock l(nullptr);
+    clip::lock l;
 
     int data = 0;
     l.get_data(int_format, (char*)&data, sizeof(int));

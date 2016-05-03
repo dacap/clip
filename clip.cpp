@@ -30,8 +30,8 @@ void default_error_handler(ErrorCode code) {
 
 error_handler g_error_handler = default_error_handler;
 
-lock::lock(void* native_handle)
-  : p(new impl(native_handle)) {
+lock::lock(void* native_window_handle)
+  : p(new impl(native_window_handle)) {
 }
 
 lock::~lock() {
@@ -79,32 +79,33 @@ format text_format()  { return 1; }
 format image_format() { return 2; }
 
 bool has(format f) {
-  lock l(nullptr);
-  if (!l.locked())
+  lock l;
+  if (l.locked())
+    return l.is_convertible(f);
+  else
     return false;
-
-  return l.is_convertible(f);
 }
 
 bool clear() {
-  lock l(nullptr);
-  if (!l.locked())
+  lock l;
+  if (l.locked())
+    return l.clear();
+  else
     return false;
-
-  return l.clear();
 }
 
 bool set_text(const std::string& value) {
-  lock l(nullptr);
-  if (!l.locked())
+  lock l;
+  if (l.locked()) {
+    l.clear();
+    return l.set_data(text_format(), value.c_str(), value.size()+1);
+  }
+  else
     return false;
-
-  l.clear();
-  return l.set_data(text_format(), value.c_str(), value.size()+1);
 }
 
 bool get_text(std::string& value) {
-  lock l(nullptr);
+  lock l;
   if (!l.locked())
     return false;
 
@@ -126,16 +127,17 @@ bool get_text(std::string& value) {
 }
 
 bool set_image(const image& img) {
-  lock l(nullptr);
-  if (!l.locked())
+  lock l;
+  if (l.locked()) {
+    l.clear();
+    return l.set_image(img);
+  }
+  else
     return false;
-
-  l.clear();
-  return l.set_image(img);
 }
 
 bool get_image(image& img) {
-  lock l(nullptr);
+  lock l;
   if (!l.locked())
     return false;
 
@@ -147,7 +149,7 @@ bool get_image(image& img) {
 }
 
 bool get_image_spec(image_spec& spec) {
-  lock l(nullptr);
+  lock l;
   if (!l.locked())
     return false;
 

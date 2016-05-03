@@ -22,7 +22,7 @@ namespace clip {
 
   class lock {
   public:
-    lock(void* native_handle);
+    lock(void* native_window_handle = nullptr);
     ~lock();
 
     // Returns true if we've locked the clipboard successfully in
