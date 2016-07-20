@@ -401,7 +401,7 @@ bool lock::impl::get_image(image& output_img) const {
           (bi->bmiColors[c].rgbBlue  << spec.blue_shift);
       }
 
-      char* src = (((char*)bi)+bi->bmiHeader.biSize+sizeof(RGBQUAD)*colors);
+      unsigned char* src = (((unsigned char*)bi)+bi->bmiHeader.biSize+sizeof(RGBQUAD)*colors);
       int padding = (4-(spec.width&3))&3;
 
       for (long y=spec.height-1; y>=0; --y, src+=padding) {
@@ -444,6 +444,9 @@ bool lock::impl::get_image_spec(image_spec& spec) const {
   if (spec.bits_per_pixel <= 8)
     spec.bits_per_pixel = 24;
   spec.bytes_per_row = w*((spec.bits_per_pixel+7)/8);
+  if (spec.bits_per_pixel == 24) {
+    spec.bytes_per_row++; // XXX hack to avoid off-by-one on 32bit handling
+  }
 
   switch (spec.bits_per_pixel) {
 
