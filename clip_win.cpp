@@ -393,23 +393,28 @@ bool lock::impl::get_image(image& output_img) const {
 
     case 8: {
       int colors = (bi->bmiHeader.biClrUsed > 0 ? bi->bmiHeader.biClrUsed: 256);
+      std::vector<uint32_t> palette(colors);
+      for (int c=0; c<colors; ++c) {
+        palette[c] =
+          (bi->bmiColors[c].rgbRed   << spec.red_shift) |
+          (bi->bmiColors[c].rgbGreen << spec.green_shift) |
+          (bi->bmiColors[c].rgbBlue  << spec.blue_shift);
+      }
 
-      unsigned char* src = (((unsigned char*)bi)+bi->bmiHeader.biSize+sizeof(RGBQUAD)*colors);
+      char* src = (((char*)bi)+bi->bmiHeader.biSize+sizeof(RGBQUAD)*colors);
       int padding = (4-(spec.width&3))&3;
 
       for (long y=spec.height-1; y>=0; --y, src+=padding) {
-        unsigned char* dst = (unsigned char*)(img.data())+y*spec.bytes_per_row;
+        char* dst = img.data()+y*spec.bytes_per_row;
 
-        for (unsigned long x=0; x<spec.width; ++x) {
-          int idx = *(src++);
+        for (unsigned long x=0; x<spec.width; ++x, ++src, dst+=3) {
+          int idx = *src;
           if (idx < 0)
             idx = 0;
           else if (idx >= colors)
             idx = colors-1;
 
-          *(dst++) = bi->bmiColors[idx].rgbBlue;
-          *(dst++) = bi->bmiColors[idx].rgbGreen;
-          *(dst++) = bi->bmiColors[idx].rgbRed;
+          *((uint32_t*)dst) = palette[idx];
         }
       }
       break;
