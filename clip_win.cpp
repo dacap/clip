@@ -463,7 +463,15 @@ bool lock::impl::get_image_spec(image_spec& spec) const {
       break;
 
     case 24: {
-      int padding = (4-((spec.width*3)&3))&3;
+      // We need one extra byte to avoid a crash updating the last
+      // pixel on last row using:
+      //
+      //   *((uint32_t*)ptr) = pixel24bpp;
+      //
+      ++spec.bytes_per_row;
+
+      // Align each row to 32bpp
+      int padding = (4-(spec.bytes_per_row&3))&3;
       spec.bytes_per_row += padding;
 
       spec.red_mask   = 0xff0000;
