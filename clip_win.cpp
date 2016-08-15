@@ -481,7 +481,7 @@ bool lock::impl::get_image_spec(image_spec& spec) const {
     }
 
     case 16: {
-      int padding = ((4-((spec.width*2)&3))&3)/2;
+      int padding = (4-(spec.bytes_per_row&3))&3;
       spec.bytes_per_row += padding;
 
       spec.red_mask   = *((DWORD*)&bi->bmiColors[0]);
