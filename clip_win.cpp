@@ -353,40 +353,25 @@ bool lock::impl::get_image(image& output_img) const {
   switch (bi->bmiHeader.biBitCount) {
 
     case 32:
+    case 24:
+    case 16: {
+      int src_bytes_per_row = spec.width*((bi->bmiHeader.biBitCount+7)/8);
+      int padding = (4-(src_bytes_per_row&3))&3;
+      const char* src = (((char*)bi)+bi->bmiHeader.biSize);
+
       if (bi->bmiHeader.biCompression == BI_BITFIELDS) {
-        char* src = (((char*)bi)+bi->bmiHeader.biSize+sizeof(RGBQUAD)*3);
-        for (long y=spec.height-1; y>=0; --y) {
+        src += sizeof(RGBQUAD)*3;
+
+        for (long y=spec.height-1; y>=0; --y, src+=src_bytes_per_row+padding) {
           char* dst = img.data()+y*spec.bytes_per_row;
-          std::copy(src, src+spec.bytes_per_row, dst);
-          src += spec.bytes_per_row;
+          std::copy(src, src+src_bytes_per_row, dst);
         }
       }
       else if (bi->bmiHeader.biCompression == BI_RGB) {
-        char* src = (((char*)bi)+bi->bmiHeader.biSize);
-        for (long y=spec.height-1; y>=0; --y) {
+        for (long y=spec.height-1; y>=0; --y, src+=src_bytes_per_row+padding) {
           char* dst = img.data()+y*spec.bytes_per_row;
-          std::copy(src, src+spec.bytes_per_row, dst);
-          src += spec.bytes_per_row;
+          std::copy(src, src+src_bytes_per_row, dst);
         }
-      }
-      break;
-
-    case 24: {
-      char* src = (((char*)bi)+bi->bmiHeader.biSize);
-      for (long y=spec.height-1; y>=0; --y) {
-        char* dst = img.data()+y*spec.bytes_per_row;
-        std::copy(src, src+spec.bytes_per_row, dst);
-        src += spec.bytes_per_row;
-      }
-      break;
-    }
-
-    case 16: {
-      char* src = (((char*)bi)+bi->bmiHeader.biSize+sizeof(RGBQUAD)*3);
-      for (long y=spec.height-1; y>=0; --y) {
-        char* dst = img.data()+y*spec.bytes_per_row;
-        std::copy(src, src+spec.bytes_per_row, dst);
-        src += spec.bytes_per_row;
       }
       break;
     }
@@ -474,9 +459,16 @@ bool lock::impl::get_image_spec(image_spec& spec) const {
       int padding = (4-(spec.bytes_per_row&3))&3;
       spec.bytes_per_row += padding;
 
-      spec.red_mask   = 0xff0000;
-      spec.green_mask = 0xff00;
-      spec.blue_mask  = 0xff;
+      if (bi->bmiHeader.biCompression == BI_BITFIELDS) {
+        spec.red_mask   = *((uint32_t*)&bi->bmiColors[0]);
+        spec.green_mask = *((uint32_t*)&bi->bmiColors[1]);
+        spec.blue_mask  = *((uint32_t*)&bi->bmiColors[2]);
+      }
+      else if (bi->bmiHeader.biCompression == BI_RGB) {
+        spec.red_mask   = 0xff0000;
+        spec.green_mask = 0xff00;
+        spec.blue_mask  = 0xff;
+      }
       break;
     }
 
@@ -484,10 +476,16 @@ bool lock::impl::get_image_spec(image_spec& spec) const {
       int padding = (4-(spec.bytes_per_row&3))&3;
       spec.bytes_per_row += padding;
 
-      spec.red_mask   = *((DWORD*)&bi->bmiColors[0]);
-      spec.green_mask = *((DWORD*)&bi->bmiColors[1]);
-      spec.blue_mask  = *((DWORD*)&bi->bmiColors[2]);
-      spec.alpha_mask = 0;
+      if (bi->bmiHeader.biCompression == BI_BITFIELDS) {
+        spec.red_mask   = *((DWORD*)&bi->bmiColors[0]);
+        spec.green_mask = *((DWORD*)&bi->bmiColors[1]);
+        spec.blue_mask  = *((DWORD*)&bi->bmiColors[2]);
+      }
+      else if (bi->bmiHeader.biCompression == BI_RGB) {
+        spec.red_mask   = 0x7c00;
+        spec.green_mask = 0x03e0;
+        spec.blue_mask  = 0x001f;
+      }
       break;
     }
   }
