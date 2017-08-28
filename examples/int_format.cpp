@@ -1,5 +1,5 @@
 // Clip Library
-// Copyright (c) 2015-2016 David Capello
+// Copyright (c) 2015-2017 David Capello
 
 #include "clip.h"
 #include "random.h"
@@ -7,7 +7,7 @@
 #include <iostream>
 
 int main() {
-  clip::format int_format = clip::register_format("org.aseprite.clip.CustomInt");
+  clip::format int_format = clip::register_format("com.davidcapello.clip.CustomInt");
 
   {
     clip::lock l;

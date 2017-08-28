@@ -1,5 +1,5 @@
 # Clip Library
-*Copyright (C) 2015-2016 David Capello*
+*Copyright (C) 2015-2017 David Capello*
 
 > Distributed under [MIT license](LICENSE.txt)
 
@@ -47,3 +47,9 @@ Library to copy/retrieve content to/from the clipboard/pasteboard.
 * Support Linux (GTK? KDE? X11?) clipboard
 * Add support to copy/paste images on Linux
 * Add support to copy/paste user-defined formats on Linux
+
+## Who is using this library?
+
+`clip` is being used in the following applications:
+
+* [Aseprite](https://github.com/aseprite/aseprite)
