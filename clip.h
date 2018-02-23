@@ -1,5 +1,5 @@
 // Clip Library
-// Copyright (c) 2015-2016 David Capello
+// Copyright (c) 2015-2018 David Capello
 
 #ifndef CLIP_H_INCLUDED
 #define CLIP_H_INCLUDED
@@ -116,6 +116,15 @@ namespace clip {
     unsigned long alpha_shift;
   };
 
+  // The image data must contain straight RGB values
+  // (non-premultiplied by alpha). The image retrieved from the
+  // clipboard will be non-premultiplied too. Basically you will be
+  // always dealing with straight alpha images.
+  //
+  // Details: Windows expects premultiplied images on its clipboard
+  // content, so the library code make the proper conversion
+  // automatically. macOS handles straight alpha directly, so there is
+  // no conversion at all.
   class image {
   public:
     // Constructor to use get_image()

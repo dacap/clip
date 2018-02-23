@@ -1,5 +1,5 @@
 # Clip Library
-*Copyright (C) 2015-2017 David Capello*
+*Copyright (C) 2015-2018 David Capello*
 
 > Distributed under [MIT license](LICENSE.txt)
 
@@ -8,7 +8,7 @@ Library to copy/retrieve content to/from the clipboard/pasteboard.
 ## Features
 
 * Copy/paste UTF-8 text on Windows and OS X.
-* Copy/paste RGB/RGBA images on Windows and OS X.
+* Copy/paste RGB/RGBA images on Windows and OS X. This library use non-premultiplied alpha RGB values.
 * Copy/paste user-defined data on Windows and OS X.
 
 ## Example

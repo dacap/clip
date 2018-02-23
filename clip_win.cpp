@@ -1,5 +1,5 @@
 // Clip Library
-// Copyright (c) 2015-2016 David Capello
+// Copyright (c) 2015-2018 David Capello
 
 #include "clip.h"
 #include "clip_win.h"
@@ -307,11 +307,21 @@ bool lock::impl::set_image(const image& image) {
 
         for (unsigned long x=0; x<spec.width; ++x, ++src_x, ++dst_x) {
           uint32_t c = *src_x;
+          int r = ((c & spec.red_mask  ) >> spec.red_shift  );
+          int g = ((c & spec.green_mask) >> spec.green_shift);
+          int b = ((c & spec.blue_mask ) >> spec.blue_shift );
+          int a = ((c & spec.alpha_mask) >> spec.alpha_shift);
+
+          // Windows requires premultiplied RGBA values
+          r = r * a / 255;
+          g = g * a / 255;
+          b = b * a / 255;
+
           *dst_x =
-            (((c & spec.red_mask  ) >> spec.red_shift  ) << out_spec.red_shift  ) |
-            (((c & spec.green_mask) >> spec.green_shift) << out_spec.green_shift) |
-            (((c & spec.blue_mask ) >> spec.blue_shift ) << out_spec.blue_shift ) |
-            (((c & spec.alpha_mask) >> spec.alpha_shift) << out_spec.alpha_shift);
+            (r << out_spec.red_shift  ) |
+            (g << out_spec.green_shift) |
+            (b << out_spec.blue_shift ) |
+            (a << out_spec.alpha_shift);
         }
 
         src += spec.bytes_per_row;
@@ -355,8 +365,8 @@ bool lock::impl::get_image(image& output_img) const {
     case 32:
     case 24:
     case 16: {
-      int src_bytes_per_row = spec.width*((bi->bmiHeader.biBitCount+7)/8);
-      int padding = (4-(src_bytes_per_row&3))&3;
+      const int src_bytes_per_row = spec.width*((bi->bmiHeader.biBitCount+7)/8);
+      const int padding = (4-(src_bytes_per_row&3))&3;
       const char* src = (((char*)bi)+bi->bmiHeader.biSize);
 
       if (bi->bmiHeader.biCompression == BI_BITFIELDS) {
@@ -373,11 +383,42 @@ bool lock::impl::get_image(image& output_img) const {
           std::copy(src, src+src_bytes_per_row, dst);
         }
       }
+
+      // Windows uses premultiplied RGB values, and we use straight
+      // alpha. So we have to divide all RGB values by its alpha.
+      if (bi->bmiHeader.biBitCount == 32) {
+        for (int y=0; y<spec.height; ++y) {
+          uint32_t* dst = (uint32_t*)(img.data()+y*spec.bytes_per_row);
+
+          for (int x=0; x<spec.width; ++x, ++dst) {
+            uint32_t c = *dst;
+            int r = ((c & spec.red_mask  ) >> spec.red_shift  );
+            int g = ((c & spec.green_mask) >> spec.green_shift);
+            int b = ((c & spec.blue_mask ) >> spec.blue_shift );
+            int a = ((c & spec.alpha_mask) >> spec.alpha_shift);
+
+            if (a > 0) {
+              if (r <= a) r = r * 255 / a;
+              if (g <= a) g = g * 255 / a;
+              if (b <= a) b = b * 255 / a;
+            }
+            else {
+              r = g = b = 0;
+            }
+
+            *dst =
+              (r << spec.red_shift  ) |
+              (g << spec.green_shift) |
+              (b << spec.blue_shift ) |
+              (a << spec.alpha_shift);
+          }
+        }
+      }
       break;
     }
 
     case 8: {
-      int colors = (bi->bmiHeader.biClrUsed > 0 ? bi->bmiHeader.biClrUsed: 256);
+      const int colors = (bi->bmiHeader.biClrUsed > 0 ? bi->bmiHeader.biClrUsed: 256);
       std::vector<uint32_t> palette(colors);
       for (int c=0; c<colors; ++c) {
         palette[c] =
@@ -386,8 +427,8 @@ bool lock::impl::get_image(image& output_img) const {
           (bi->bmiColors[c].rgbBlue  << spec.blue_shift);
       }
 
-      uint8_t* src = (((uint8_t*)bi)+bi->bmiHeader.biSize+sizeof(RGBQUAD)*colors);
-      int padding = (4-(spec.width&3))&3;
+      const uint8_t* src = (((uint8_t*)bi)+bi->bmiHeader.biSize+sizeof(RGBQUAD)*colors);
+      const int padding = (4-(spec.width&3))&3;
 
       for (long y=spec.height-1; y>=0; --y, src+=padding) {
         char* dst = img.data()+y*spec.bytes_per_row;
