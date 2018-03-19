@@ -386,32 +386,64 @@ bool lock::impl::get_image(image& output_img) const {
 
       // Windows uses premultiplied RGB values, and we use straight
       // alpha. So we have to divide all RGB values by its alpha.
-      if (bi->bmiHeader.biBitCount == 32) {
-        for (int y=0; y<spec.height; ++y) {
-          uint32_t* dst = (uint32_t*)(img.data()+y*spec.bytes_per_row);
+      if (bi->bmiHeader.biBitCount == 32 &&
+          spec.alpha_mask) {
+        bool hasAlphaGreaterThanZero = false;
+        bool hasValidPremultipliedAlpha = true;
 
+        for (int y=0; y<spec.height; ++y) {
+          const uint32_t* dst = (uint32_t*)(img.data()+y*spec.bytes_per_row);
           for (int x=0; x<spec.width; ++x, ++dst) {
-            uint32_t c = *dst;
-            int r = ((c & spec.red_mask  ) >> spec.red_shift  );
-            int g = ((c & spec.green_mask) >> spec.green_shift);
-            int b = ((c & spec.blue_mask ) >> spec.blue_shift );
-            int a = ((c & spec.alpha_mask) >> spec.alpha_shift);
+            const uint32_t c = *dst;
+            const int r = ((c & spec.red_mask  ) >> spec.red_shift  );
+            const int g = ((c & spec.green_mask) >> spec.green_shift);
+            const int b = ((c & spec.blue_mask ) >> spec.blue_shift );
+            const int a = ((c & spec.alpha_mask) >> spec.alpha_shift);
 
             if (a > 0) {
-              if (r <= a) r = r * 255 / a;
-              if (g <= a) g = g * 255 / a;
-              if (b <= a) b = b * 255 / a;
+              hasAlphaGreaterThanZero = true;
+              if (r > a || g > a || b > a) {
+                hasValidPremultipliedAlpha = false;
+                break;
+              }
             }
-            else {
-              r = g = b = 0;
-            }
-
-            *dst =
-              (r << spec.red_shift  ) |
-              (g << spec.green_shift) |
-              (b << spec.blue_shift ) |
-              (a << spec.alpha_shift);
           }
+        }
+
+        if (hasAlphaGreaterThanZero) {
+          if (hasValidPremultipliedAlpha) {
+            for (int y=0; y<spec.height; ++y) {
+              uint32_t* dst = (uint32_t*)(img.data()+y*spec.bytes_per_row);
+              for (int x=0; x<spec.width; ++x, ++dst) {
+                uint32_t c = *dst;
+                int r = ((c & spec.red_mask  ) >> spec.red_shift  );
+                int g = ((c & spec.green_mask) >> spec.green_shift);
+                int b = ((c & spec.blue_mask ) >> spec.blue_shift );
+                int a = ((c & spec.alpha_mask) >> spec.alpha_shift);
+
+                if (a > 0) {
+                  // Make straight alpha
+                  r = r * 255 / a;
+                  g = g * 255 / a;
+                  b = b * 255 / a;
+                }
+                else {
+                  r = g = b = 0;
+                }
+
+                *dst =
+                  (r << spec.red_shift  ) |
+                  (g << spec.green_shift) |
+                  (b << spec.blue_shift ) |
+                  (a << spec.alpha_shift);
+              }
+            }
+          }
+        }
+        // As all alpha values = 0, just remove the alpha mask so we
+        // get all RGB values.
+        else {
+          spec.alpha_mask = 0;
         }
       }
       break;
@@ -478,7 +510,7 @@ bool lock::impl::get_image_spec(image_spec& spec) const {
         spec.red_mask   = *((uint32_t*)&bi->bmiColors[0]);
         spec.green_mask = *((uint32_t*)&bi->bmiColors[1]);
         spec.blue_mask  = *((uint32_t*)&bi->bmiColors[2]);
-        spec.alpha_mask = 0;
+        spec.alpha_mask = 0xff000000;
       }
       else if (bi->bmiHeader.biCompression == BI_RGB) {
         spec.red_mask   = 0xff0000;
