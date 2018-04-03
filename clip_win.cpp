@@ -391,59 +391,59 @@ bool lock::impl::get_image(image& output_img) const {
         bool hasAlphaGreaterThanZero = false;
         bool hasValidPremultipliedAlpha = true;
 
-        for (int y=0; y<spec.height; ++y) {
+        for (unsigned long y=0; y<spec.height; ++y) {
           const uint32_t* dst = (uint32_t*)(img.data()+y*spec.bytes_per_row);
-          for (int x=0; x<spec.width; ++x, ++dst) {
+          for (unsigned long x=0; x<spec.width; ++x, ++dst) {
             const uint32_t c = *dst;
             const int r = ((c & spec.red_mask  ) >> spec.red_shift  );
             const int g = ((c & spec.green_mask) >> spec.green_shift);
             const int b = ((c & spec.blue_mask ) >> spec.blue_shift );
             const int a = ((c & spec.alpha_mask) >> spec.alpha_shift);
 
-            if (a > 0) {
+            if (a > 0)
               hasAlphaGreaterThanZero = true;
-              if (r > a || g > a || b > a) {
-                hasValidPremultipliedAlpha = false;
-                break;
-              }
-            }
+            if (r > a || g > a || b > a)
+              hasValidPremultipliedAlpha = false;
           }
         }
 
-        if (hasAlphaGreaterThanZero) {
-          if (hasValidPremultipliedAlpha) {
-            for (int y=0; y<spec.height; ++y) {
-              uint32_t* dst = (uint32_t*)(img.data()+y*spec.bytes_per_row);
-              for (int x=0; x<spec.width; ++x, ++dst) {
-                uint32_t c = *dst;
-                int r = ((c & spec.red_mask  ) >> spec.red_shift  );
-                int g = ((c & spec.green_mask) >> spec.green_shift);
-                int b = ((c & spec.blue_mask ) >> spec.blue_shift );
-                int a = ((c & spec.alpha_mask) >> spec.alpha_shift);
+        for (unsigned long y=0; y<spec.height; ++y) {
+          uint32_t* dst = (uint32_t*)(img.data()+y*spec.bytes_per_row);
+          for (unsigned long x=0; x<spec.width; ++x, ++dst) {
+            const uint32_t c = *dst;
+            int r = ((c & spec.red_mask  ) >> spec.red_shift  );
+            int g = ((c & spec.green_mask) >> spec.green_shift);
+            int b = ((c & spec.blue_mask ) >> spec.blue_shift );
+            int a = ((c & spec.alpha_mask) >> spec.alpha_shift);
 
-                if (a > 0) {
-                  // Make straight alpha
-                  r = r * 255 / a;
-                  g = g * 255 / a;
-                  b = b * 255 / a;
-                }
-                else {
-                  r = g = b = 0;
-                }
-
-                *dst =
-                  (r << spec.red_shift  ) |
-                  (g << spec.green_shift) |
-                  (b << spec.blue_shift ) |
-                  (a << spec.alpha_shift);
+            if (hasAlphaGreaterThanZero &&
+                hasValidPremultipliedAlpha) {
+              if (a > 0) {
+                // Make straight alpha
+                r = r * 255 / a;
+                g = g * 255 / a;
+                b = b * 255 / a;
               }
             }
+            else {
+              // If all alpha values = 0 or just one alpha value is
+              // not a valid alpha for premultiplied RGB values, we
+              // make the image opaque.
+              a = 255;
+
+              // We cannot change the image spec
+              // (e.g. spec.alpha_mask=0) to make the image opaque,
+              // because the "spec" variable is local to this
+              // function. The image spec used by the client is the
+              // one returned by get_image_spec().
+            }
+
+            *dst =
+              (r << spec.red_shift  ) |
+              (g << spec.green_shift) |
+              (b << spec.blue_shift ) |
+              (a << spec.alpha_shift);
           }
-        }
-        // As all alpha values = 0, just remove the alpha mask so we
-        // get all RGB values.
-        else {
-          spec.alpha_mask = 0;
         }
       }
       break;
