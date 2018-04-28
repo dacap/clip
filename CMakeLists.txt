@@ -1,5 +1,5 @@
 # Clip Library
-# Copyright (C) 2015-2016 David Capello
+# Copyright (C) 2015-2018 David Capello
 
 cmake_minimum_required(VERSION 2.6)
 
@@ -15,11 +15,10 @@ if(WIN32)
 endif()
 
 if(APPLE)
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11 -stdlib=libc++")
   add_definitions(-fobjc-arc)
   list(APPEND CLIP_SOURCES clip_osx.mm)
-endif()
-
-if(UNIX)
+elseif(UNIX)
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=gnu++11")
 endif()
 
