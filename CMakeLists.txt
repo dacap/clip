@@ -3,7 +3,7 @@
 
 cmake_minimum_required(VERSION 2.6)
 
-project(clip CXX)
+project(clip)
 option(CLIP_EXAMPLES "Compile clip examples" on)
 
 include_directories(.)
@@ -19,7 +19,14 @@ if(APPLE)
   add_definitions(-fobjc-arc)
   list(APPEND CLIP_SOURCES clip_osx.mm)
 elseif(UNIX)
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=gnu++11")
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
+
+  include(CheckIncludeFiles)
+  check_include_files(xcb/xcb.h HAVE_XCB_XLIB_H)
+  if(HAVE_XCB_XLIB_H)
+    add_definitions(-DHAVE_XCB_XLIB_H)
+    list(APPEND CLIP_SOURCES clip_x11.cpp)
+  endif()
 endif()
 
 add_library(clip ${CLIP_SOURCES})
@@ -27,6 +34,10 @@ add_library(clip ${CLIP_SOURCES})
 if(APPLE)
   find_library(COCOA_LIBRARY Cocoa)
   target_link_libraries(clip ${COCOA_LIBRARY})
+elseif(UNIX)
+  if(HAVE_XCB_XLIB_H)
+    target_link_libraries(clip xcb pthread)
+  endif()
 endif()
 
 if(CLIP_EXAMPLES)
