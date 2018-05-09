@@ -20,6 +20,16 @@ namespace clip {
 
 namespace {
 
+enum CommonAtom {
+  CLIPBOARD,
+  TARGETS,
+};
+
+const char* kCommonAtomNames[] = {
+  "CLIPBOARD",
+  "TARGETS",
+};
+
 class Manager {
 public:
   typedef std::shared_ptr<std::vector<uint8_t>> buffer_ptr;
@@ -172,7 +182,7 @@ private:
   }
 
   void handle_selection_clear_event(xcb_selection_clear_event_t* event) {
-    if (event->selection == get_atom("CLIPBOARD")) {
+    if (event->selection == get_atom(CLIPBOARD)) {
       std::lock_guard<std::mutex> lock(m_mutex);
       clear(); // Clear our clipboard data
     }
@@ -181,7 +191,7 @@ private:
   void handle_selection_request_event(xcb_selection_request_event_t* event) {
     std::lock_guard<std::mutex> lock(m_mutex);
 
-    if (event->target == get_atom("TARGETS")) {
+    if (event->target == get_atom(TARGETS)) {
       atoms targets;
       for (const auto& it : m_data)
         targets.push_back(it.first);
@@ -289,6 +299,15 @@ private:
     return result;
   }
 
+  xcb_atom_t get_atom(CommonAtom i) const {
+    if (m_common_atoms.empty()) {
+      m_common_atoms =
+        get_atoms(kCommonAtomNames,
+                  sizeof(kCommonAtomNames) / sizeof(kCommonAtomNames[0]));
+    }
+    return m_common_atoms[i];
+  }
+
   const atoms& get_text_format_atoms() const {
     if (m_text_atoms.empty()) {
       const char* names[] = {
@@ -308,7 +327,7 @@ private:
     xcb_void_cookie_t cookie =
       xcb_set_selection_owner_checked(m_connection,
                                       m_window,
-                                      get_atom("CLIPBOARD"),
+                                      get_atom(CLIPBOARD),
                                       XCB_CURRENT_TIME);
     xcb_generic_error_t* err =
       xcb_request_check(m_connection,
@@ -324,7 +343,7 @@ private:
     xcb_window_t result = 0;
     xcb_get_selection_owner_cookie_t cookie =
       xcb_get_selection_owner(m_connection,
-                              get_atom("CLIPBOARD"));
+                              get_atom(CLIPBOARD));
 
     xcb_get_selection_owner_reply_t* reply =
       xcb_get_selection_owner_reply(m_connection, cookie, nullptr);
@@ -340,8 +359,9 @@ private:
   bool m_stop;
   std::thread m_thread;
   mutable std::map<std::string, xcb_atom_t> m_atoms; // Cache of known atoms
-  mutable atoms m_text_atoms;                        // Cache of atoms related to text content
-  std::map<xcb_atom_t, buffer_ptr> m_data;           // Actual clipboard data
+  mutable atoms m_common_atoms; // Cache of common used atoms by us
+  mutable atoms m_text_atoms;   // Cache of atoms related to text content
+  std::map<xcb_atom_t, buffer_ptr> m_data; // Actual clipboard data
   std::mutex m_mutex;
 };
 
