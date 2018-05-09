@@ -72,7 +72,7 @@ public:
         }
       }
       else {
-        // TODO ask atoms to selection ownership
+        // TODO ask atoms to selection owner
       }
     }
     return false;
@@ -109,7 +109,7 @@ public:
         }
       }
       else {
-        // TODO ask data content to selection ownership
+        // TODO ask data content to selection owner
       }
     }
     return false;
@@ -126,7 +126,7 @@ public:
         }
       }
       else {
-        // TODO ask data length to selection ownership
+        // TODO ask data length to selection owner
       }
     }
     return 0;
