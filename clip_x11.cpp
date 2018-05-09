@@ -18,6 +18,8 @@
 
 namespace clip {
 
+namespace {
+
 class Manager {
 public:
   typedef std::shared_ptr<std::vector<uint8_t>> buffer_ptr;
@@ -343,13 +345,15 @@ private:
   std::mutex m_mutex;
 };
 
-static Manager* manager = nullptr;
-static void delete_manager_atexit() {
+Manager* manager = nullptr;
+void delete_manager_atexit() {
   if (manager) {
     delete manager;
     manager = nullptr;
   }
 }
+
+} // anonymous namespace
 
 lock::impl::impl(void*) : m_locked(false) {
   if (!manager) {
