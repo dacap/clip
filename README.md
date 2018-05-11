@@ -8,8 +8,8 @@ Library to copy/retrieve content to/from the clipboard/pasteboard.
 ## Features
 
 * Copy/paste UTF-8 text on Windows, macOS, and Linux (X11).
+* Copy/paste user-defined data on Windows, macOS, and Linux (X11).
 * Copy/paste RGB/RGBA images on Windows and macOS. This library use non-premultiplied alpha RGB values.
-* Copy/paste user-defined data on Windows and macOS.
 
 ## Example
 
@@ -49,7 +49,6 @@ int main() {
 ## To-do
 
 * Add support to copy/paste images on Linux
-* Add support to copy/paste user-defined formats on Linux
 * Support keeping Linux clipboard content alive even when the process is closed
 
 ## Who is using this library?

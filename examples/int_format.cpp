@@ -15,6 +15,8 @@ int main() {
       int data = 0;
       if (l.get_data(int_format, (char*)&data, sizeof(int)))
         std::cout << "Existing custom data in clipboard: " << data << "\n";
+      else
+        std::cout << "Error getting existing custom data from clipboard\n";
     }
     else
       std::cout << "Clipboard doesn't have custom data\n";

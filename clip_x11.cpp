@@ -31,6 +31,8 @@ const char* kCommonAtomNames[] = {
   "TARGETS",
 };
 
+const int kBaseForCustomFormats = 100;
+
 class Manager {
 public:
   typedef std::shared_ptr<std::vector<uint8_t>> buffer_ptr;
@@ -98,20 +100,43 @@ public:
   }
 
   bool is_convertible(format f) const {
-    if (f == text_format()) {
-      xcb_window_t owner = get_x11_selection_owner();
-      if (owner == m_window) {
-        for (xcb_atom_t atom : get_text_format_atoms()) {
-          auto it = m_data.find(atom);
-          if (it != m_data.end())
-            return true;
-        }
-      }
-      else {
-        // TODO ask atoms to selection owner
-        return true;
+    const atoms atoms = get_format_atoms(f);
+    const xcb_window_t owner = get_x11_selection_owner();
+
+    // If we are the owner, we just can check the m_data map
+    if (owner == m_window) {
+      for (xcb_atom_t atom : atoms) {
+        auto it = m_data.find(atom);
+        if (it != m_data.end())
+          return true;
       }
     }
+    // Ask to the selection owner the available formats/atoms/targets.
+    else if (owner) {
+      destroy_get_clipboard_reply();
+
+      bool result =
+        get_data_from_selection_owner(
+          { get_atom(TARGETS) },
+          [this, &atoms]() -> bool {
+            xcb_atom_t* sel_atoms = (xcb_atom_t*)xcb_get_property_value(m_reply);
+            int sel_natoms = xcb_get_property_value_length(m_reply);
+            auto atoms_begin = atoms.begin();
+            auto atoms_end = atoms.end();
+            for (int i=0; i<sel_natoms; ++i) {
+              if (std::find(atoms_begin,
+                            atoms_end,
+                            sel_atoms[i]) != atoms_end) {
+                return true;
+              }
+            }
+            return false;
+          });
+
+      destroy_get_clipboard_reply();
+      return result;
+    }
+
     return false;
   }
 
@@ -119,87 +144,101 @@ public:
     if (!set_x11_selection_owner())
       return false;
 
-    if (f == text_format()) {
-      buffer_ptr shared_text_buf = std::make_shared<std::vector<uint8_t>>(len);
-      std::copy(buf,
-                buf+len,
-                shared_text_buf->begin());
-      for (xcb_atom_t atom : get_text_format_atoms())
-        m_data[atom] = shared_text_buf;
-      return true;
-    }
-    return false;
+    const atoms atoms = get_format_atoms(f);
+    if (atoms.empty())
+      return false;
+
+    buffer_ptr shared_data_buf = std::make_shared<std::vector<uint8_t>>(len);
+    std::copy(buf,
+              buf+len,
+              shared_data_buf->begin());
+    for (xcb_atom_t atom : atoms)
+      m_data[atom] = shared_data_buf;
+
+    return true;
   }
 
   bool get_data(format f, char* buf, size_t len) const {
-    if (f == text_format()) {
-      xcb_window_t owner = get_x11_selection_owner();
-      if (owner == m_window) {
-        for (xcb_atom_t atom : get_text_format_atoms()) {
-          auto it = m_data.find(atom);
-          if (it != m_data.end()) {
-            int n = std::min(len, it->second->size());
-            std::copy(it->second->begin(),
-                      it->second->begin()+n,
-                      buf);
+    const atoms atoms = get_format_atoms(f);
+    const xcb_window_t owner = get_x11_selection_owner();
+    if (owner == m_window) {
+      for (xcb_atom_t atom : atoms) {
+        auto it = m_data.find(atom);
+        if (it != m_data.end()) {
+          size_t n = std::min(len, it->second->size());
+          std::copy(it->second->begin(),
+                    it->second->begin()+n,
+                    buf);
 
+          if (f == text_format()) {
             // Add an extra null char
             if (n < len)
               (*it->second)[n++] = 0;
-
-            return true;
           }
+
+          return true;
         }
       }
-      else if (owner) {
-        if (get_data_from_selection_owner(
-              get_text_format_atoms(),
-              [this, buf, len]() -> bool {
-                uint8_t* src = (uint8_t*)xcb_get_property_value(m_reply);
-                size_t srclen = xcb_get_property_value_length(m_reply);
-                srclen = srclen * (m_reply->format/8);
+    }
+    else if (owner) {
+      if (get_data_from_selection_owner(
+            atoms,
+            [this, buf, len, f]() -> bool {
+              uint8_t* src = (uint8_t*)xcb_get_property_value(m_reply);
+              size_t srclen = xcb_get_property_value_length(m_reply);
+              srclen = srclen * (m_reply->format/8);
 
-                size_t n = std::min(srclen, len);
-                std::copy(src, src+n, buf);
+              size_t n = std::min(srclen, len);
+              std::copy(src, src+n, buf);
+
+              if (f == text_format()) {
                 if (n < len)
                   buf[n] = 0; // Include a null character
+              }
 
-                return true;
-              })) {
-          return false;
-        }
+              return true;
+            })) {
+        return true;
       }
     }
     return false;
   }
 
   size_t get_data_length(format f) const {
-    if (f == text_format()) {
-      xcb_window_t owner = get_x11_selection_owner();
-      if (owner == m_window) {
-        for (xcb_atom_t atom : get_text_format_atoms()) {
-          auto it = m_data.find(atom);
-          if (it != m_data.end())
-            return it->second->size()+1; // Add an extra byte for the null char
-        }
-      }
-      else if (owner) {
-        size_t len = 0;
-        if (get_data_from_selection_owner(
-              get_text_format_atoms(),
-              [this, &len]() -> bool {
-                len = xcb_get_property_value_length(m_reply);
-                len = len * (m_reply->format/8);
-
-                if (len > 0)
-                  ++len;          // For the null character
-                return true;
-              })) {
-          return len;
+    size_t len = 0;
+    const atoms atoms = get_format_atoms(f);
+    const xcb_window_t owner = get_x11_selection_owner();
+    if (owner == m_window) {
+      for (xcb_atom_t atom : atoms) {
+        auto it = m_data.find(atom);
+        if (it != m_data.end()) {
+          len = it->second->size();
+          break;
         }
       }
     }
-    return 0;
+    else if (owner) {
+      if (!get_data_from_selection_owner(
+            atoms,
+            [this, &len]() -> bool {
+              len = xcb_get_property_value_length(m_reply);
+              len = len * (m_reply->format/8);
+              return true;
+            })) {
+        // Error getting data length
+        return 0;
+      }
+    }
+    if (f == text_format() && len > 0) {
+      ++len; // Add an extra byte for the null char
+    }
+    return len;
+  }
+
+  format register_format(const std::string& name) {
+    xcb_atom_t atom = get_atom(name.c_str());
+    m_custom_formats.push_back(atom);
+    return (format)(m_custom_formats.size()-1) + kBaseForCustomFormats;
   }
 
 private:
@@ -336,7 +375,7 @@ private:
     }
   }
 
-  void destroy_get_clipboard_reply() {
+  void destroy_get_clipboard_reply() const {
     if (m_reply) {
       free(m_reply);
       m_reply = nullptr;
@@ -464,6 +503,19 @@ private:
     return m_text_atoms;
   }
 
+  atoms get_format_atoms(const format f) const {
+    atoms atoms;
+    if (f == text_format()) {
+      atoms = get_text_format_atoms();
+    }
+    else {
+      xcb_atom_t atom = get_format_atom(f);
+      if (atom)
+        atoms.push_back(atom);
+    }
+    return atoms;
+  }
+
   bool set_x11_selection_owner() const {
     xcb_void_cookie_t cookie =
       xcb_set_selection_owner_checked(m_connection,
@@ -493,6 +545,14 @@ private:
       free(reply);
     }
     return result;
+  }
+
+  xcb_atom_t get_format_atom(const format f) const {
+    int i = f - kBaseForCustomFormats;
+    if (i >= 0 && i < m_custom_formats.size())
+      return m_custom_formats[i];
+    else
+      return 0;
   }
 
   xcb_connection_t* m_connection;
@@ -536,9 +596,12 @@ private:
   // (get_data_length, and then get_data) so we can use the same
   // xcb_get_property_reply_t for both queries.
   mutable xcb_get_property_reply_t* m_reply;
+
+  std::vector<xcb_atom_t> m_custom_formats;
 };
 
 Manager* manager = nullptr;
+
 void delete_manager_atexit() {
   if (manager) {
     delete manager;
@@ -546,14 +609,18 @@ void delete_manager_atexit() {
   }
 }
 
-} // anonymous namespace
-
-lock::impl::impl(void*) : m_locked(false) {
+Manager* get_manager() {
   if (!manager) {
     manager = new Manager;
     std::atexit(delete_manager_atexit);
   }
-  m_locked = manager->try_lock();
+  return manager;
+}
+
+} // anonymous namespace
+
+lock::impl::impl(void*) : m_locked(false) {
+  m_locked = get_manager()->try_lock();
 }
 
 lock::impl::~impl() {
@@ -595,7 +662,7 @@ bool lock::impl::get_image_spec(image_spec& spec) const {
 }
 
 format register_format(const std::string& name) {
-  return 0;                     // TODO
+  return get_manager()->register_format(name);
 }
 
 } // namespace clip
