@@ -71,8 +71,7 @@ public:
     if (!m_data.empty() &&
         m_window &&
         m_window == get_x11_selection_owner()) {
-      // TODO remove this and create some method to keep the clipboard alive.
-      std::this_thread::sleep_for(std::chrono::seconds(10));
+      // TODO create some method to keep the clipboard alive.
     }
 
     if (m_window) {
