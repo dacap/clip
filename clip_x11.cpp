@@ -2,7 +2,7 @@
 // Copyright (c) 2018 David Capello
 
 #include "clip.h"
-#include "clip_x11.h"
+#include "clip_lock_impl.h"
 
 #include <xcb/xcb.h>
 
@@ -559,10 +559,6 @@ lock::impl::impl(void*) : m_locked(false) {
 lock::impl::~impl() {
   if (m_locked)
     manager->unlock();
-}
-
-bool lock::impl::locked() const {
-  return m_locked;
 }
 
 bool lock::impl::clear() {

@@ -2,7 +2,7 @@
 // Copyright (c) 2015-2018 David Capello
 
 #include "clip.h"
-#include "clip_win.h"
+#include "clip_lock_impl.h"
 
 #include <cassert>
 #include <vector>
@@ -77,10 +77,6 @@ lock::impl::impl(void* hwnd) : m_locked(false) {
 lock::impl::~impl() {
   if (m_locked)
     CloseClipboard();
-}
-
-bool lock::impl::locked() const {
-  return m_locked;
 }
 
 bool lock::impl::clear() {

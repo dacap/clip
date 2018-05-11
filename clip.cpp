@@ -2,16 +2,7 @@
 // Copyright (c) 2015-2018 David Capello
 
 #include "clip.h"
-
-#ifdef _WIN32
-  #include "clip_win.h"
-#elif __APPLE__
-  #include "clip_osx.h"
-#elif HAVE_XCB_XLIB_H
-  #include "clip_x11.h"
-#else
-  #include "clip_none.h"
-#endif
+#include "clip_lock_impl.h"
 
 #include <vector>
 #include <stdexcept>

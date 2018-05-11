@@ -2,7 +2,7 @@
 // Copyright (c) 2015-2016 David Capello
 
 #include "clip.h"
-#include "clip_osx.h"
+#include "clip_lock_impl.h"
 
 #include <cassert>
 #include <vector>
@@ -120,14 +120,10 @@ namespace {
 
 }
 
-lock::impl::impl(void*) {
+lock::impl::impl(void*) : m_locked(true) {
 }
 
 lock::impl::~impl() {
-}
-
-bool lock::impl::locked() const {
-  return true;
 }
 
 bool lock::impl::clear() {
