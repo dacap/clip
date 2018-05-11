@@ -39,10 +39,18 @@ public:
 
   Manager()
     : m_connection(xcb_connect(nullptr, nullptr))
-    , m_stop(false)
     , m_reply(nullptr) {
     xcb_screen_t* screen =
       xcb_setup_roots_iterator(xcb_get_setup(m_connection)).data;
+
+
+    uint32_t event_mask =
+      // Just in case that some program reports SelectionNotify events
+      // with XCB_EVENT_MASK_PROPERTY_CHANGE mask.
+      XCB_EVENT_MASK_PROPERTY_CHANGE |
+      // To receive DestroyNotify event and stop the message loop.
+      XCB_EVENT_MASK_STRUCTURE_NOTIFY;
+
     m_window = xcb_generate_id(m_connection);
     xcb_create_window(m_connection, 0,
                       m_window,
@@ -50,7 +58,8 @@ public:
                       0, 0, 1, 1, 0,
                       XCB_WINDOW_CLASS_INPUT_OUTPUT,
                       screen->root_visual,
-                      0, nullptr);
+                      XCB_CW_EVENT_MASK,
+                      &event_mask);
 
     m_thread = std::thread(
       [this]{
@@ -66,10 +75,13 @@ public:
       std::this_thread::sleep_for(std::chrono::seconds(10));
     }
 
-    m_stop = true;
+    if (m_window) {
+      xcb_destroy_window(m_connection, m_window);
+      xcb_flush(m_connection);
+    }
+
     m_thread.join();
 
-    xcb_destroy_window(m_connection, m_window);
     xcb_disconnect(m_connection);
   }
 
@@ -194,38 +206,40 @@ public:
 private:
 
   void process_x11_events() {
+    bool stop = false;
     xcb_generic_event_t* event;
-    while (!m_stop) {
-      while ((event = xcb_poll_for_event(m_connection))) {
-        int type = (event->response_type & ~0x80);
+    while (!stop && (event = xcb_wait_for_event(m_connection))) {
+      int type = (event->response_type & ~0x80);
 
-        switch (type) {
+      switch (type) {
 
-          // Someone else has new content in the clipboard, so is
-          // notifying us that we should delete our data now.
-          case XCB_SELECTION_CLEAR:
-            handle_selection_clear_event(
-              (xcb_selection_clear_event_t*)event);
-            break;
+        case XCB_DESTROY_NOTIFY:
+          // To stop the message loop we can just destroy the window
+          stop = true;
+          break;
+
+        // Someone else has new content in the clipboard, so is
+        // notifying us that we should delete our data now.
+        case XCB_SELECTION_CLEAR:
+          handle_selection_clear_event(
+            (xcb_selection_clear_event_t*)event);
+          break;
 
           // Someone is requesting the clipboard content from us.
-          case XCB_SELECTION_REQUEST:
-            handle_selection_request_event(
-              (xcb_selection_request_event_t*)event);
-            break;
+        case XCB_SELECTION_REQUEST:
+          handle_selection_request_event(
+            (xcb_selection_request_event_t*)event);
+          break;
 
           // We've requested the clipboard content and this is the
           // answer.
-          case XCB_SELECTION_NOTIFY:
-            handle_selection_notify_event(
-              (xcb_selection_notify_event_t*)event);
-            break;
-        }
-
-        free(event);
+        case XCB_SELECTION_NOTIFY:
+          handle_selection_notify_event(
+            (xcb_selection_notify_event_t*)event);
+          break;
       }
 
-      std::this_thread::sleep_for(std::chrono::milliseconds(1));
+      free(event);
     }
   }
 
@@ -484,7 +498,6 @@ private:
 
   xcb_connection_t* m_connection;
   xcb_window_t m_window;
-  bool m_stop;
 
   // Thread used to run a background message loop to wait X11 events
   // about clipboard. The X11 selection owner will be a hidden window
