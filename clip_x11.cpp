@@ -552,7 +552,7 @@ private:
 
   xcb_atom_t get_format_atom(const format f) const {
     int i = f - kBaseForCustomFormats;
-    if (i >= 0 && i < m_custom_formats.size())
+    if (i >= 0 && i < int(m_custom_formats.size()))
       return m_custom_formats[i];
     else
       return 0;
