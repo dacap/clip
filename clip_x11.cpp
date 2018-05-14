@@ -492,7 +492,7 @@ private:
         // Prefer utf-8 formats first
         "UTF8_STRING",
         "text/plain;charset=utf-8",
-        "text/plain;charset=UTF-8"
+        "text/plain;charset=UTF-8",
         // ANSI C strings?
         "STRING",
         "TEXT",
