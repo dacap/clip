@@ -17,6 +17,10 @@
 #include <thread>
 #include <vector>
 
+#ifdef HAVE_PNG_H
+  #include "clip_x11_png.h"
+#endif
+
 namespace clip {
 
 namespace {
@@ -34,6 +38,7 @@ const char* kCommonAtomNames[] = {
 };
 
 const int kBaseForCustomFormats = 100;
+const char* kImagePng = "image/png";
 
 class Manager {
 public:
@@ -235,6 +240,31 @@ public:
       ++len; // Add an extra byte for the null char
     }
     return len;
+  }
+
+  bool set_image(const image& image) {
+#ifdef HAVE_PNG_H
+    if (!set_x11_selection_owner())
+      return false;
+
+    std::vector<uint8_t> output;
+    x11::create_png(image, output);
+
+    buffer_ptr shared_data_buf = std::make_shared<std::vector<uint8_t>>(std::move(output));
+    xcb_atom_t atom = get_atom(kImagePng);
+    m_data[atom] = shared_data_buf;
+    return true;
+#else
+    return false;
+#endif
+  }
+
+  bool get_image(image& output_img) const {
+    return false;
+  }
+
+  bool get_image_spec(image_spec& spec) const {
+    return false;
   }
 
   format register_format(const std::string& name) {
@@ -653,15 +683,15 @@ size_t lock::impl::get_data_length(format f) const {
 }
 
 bool lock::impl::set_image(const image& image) {
-  return false;                 // TODO
+  return manager->set_image(image);
 }
 
 bool lock::impl::get_image(image& output_img) const {
-  return false;                 // TODO
+  return manager->get_image(output_img);
 }
 
 bool lock::impl::get_image_spec(image_spec& spec) const {
-  return false;                 // TODO
+  return manager->get_image_spec(spec);
 }
 
 format register_format(const std::string& name) {
