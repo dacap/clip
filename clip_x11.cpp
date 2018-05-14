@@ -22,11 +22,13 @@ namespace clip {
 namespace {
 
 enum CommonAtom {
+  ATOM,
   CLIPBOARD,
   TARGETS,
 };
 
 const char* kCommonAtomNames[] = {
+  "ATOM",
   "CLIPBOARD",
   "TARGETS",
 };
@@ -303,7 +305,7 @@ private:
         XCB_PROP_MODE_REPLACE,
         event->requestor,
         event->property,
-        event->target,
+        get_atom(ATOM),
         8*sizeof(xcb_atom_t),
         targets.size(),
         &targets[0]);
