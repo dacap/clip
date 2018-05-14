@@ -295,6 +295,7 @@ private:
 
     if (event->target == get_atom(TARGETS)) {
       atoms targets;
+      targets.push_back(get_atom(TARGETS));
       for (const auto& it : m_data)
         targets.push_back(it.first);
 
