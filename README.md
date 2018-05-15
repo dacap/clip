@@ -48,8 +48,8 @@ int main() {
 
 ## To-do
 
-* Add support to copy/paste images on Linux
-* Support keeping Linux clipboard content alive even when the process is closed
+* Linux/X11: Keep clipboard content alive even when the process is closed
+* Linux/X11: Use `INCR` property to [transfer large data](https://www.x.org/releases/X11R7.6/doc/xorg-docs/specs/ICCCM/icccm.html#large_data_transfers)
 
 ## Who is using this library?
 
