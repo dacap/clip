@@ -7,9 +7,11 @@ Library to copy/retrieve content to/from the clipboard/pasteboard.
 
 ## Features
 
-* Copy/paste UTF-8 text on Windows, macOS, and Linux (X11).
-* Copy/paste user-defined data on Windows, macOS, and Linux (X11).
-* Copy/paste RGB/RGBA images on Windows and macOS. This library use non-premultiplied alpha RGB values.
+Available features on Windows, macOS, and Linux (X11):
+
+* Copy/paste UTF-8 text.
+* Copy/paste user-defined data.
+* Copy/paste RGB/RGBA images. This library use non-premultiplied alpha RGB values.
 
 ## Example
 
