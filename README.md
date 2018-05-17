@@ -48,11 +48,6 @@ int main() {
 
 * [Limited number of clipboard formats on Windows](http://blogs.msdn.com/b/oldnewthing/archive/2015/03/19/10601208.aspx)
 
-## To-do
-
-* Linux/X11: Keep clipboard content alive even when the process is closed
-* Linux/X11: Use `INCR` property to [transfer large data](https://www.x.org/releases/X11R7.6/doc/xorg-docs/specs/ICCCM/icccm.html#large_data_transfers)
-
 ## Who is using this library?
 
 `clip` is being used in the following applications:
