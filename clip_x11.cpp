@@ -27,8 +27,9 @@ namespace {
 
 enum CommonAtom {
   ATOM,
-  CLIPBOARD,
+  INCR,
   TARGETS,
+  CLIPBOARD,
 #ifdef HAVE_PNG_H
   MIME_IMAGE_PNG,
 #endif
@@ -36,8 +37,9 @@ enum CommonAtom {
 
 const char* kCommonAtomNames[] = {
   "ATOM",
-  "CLIPBOARD",
+  "INCR",
   "TARGETS",
+  "CLIPBOARD",
 #ifdef HAVE_PNG_H
   "image/png",
 #endif
@@ -53,6 +55,7 @@ public:
 
   Manager()
     : m_connection(xcb_connect(nullptr, nullptr))
+    , m_incr_process(false)
     , m_reply(nullptr) {
     xcb_screen_t* screen =
       xcb_setup_roots_iterator(xcb_get_setup(m_connection)).data;
@@ -103,7 +106,6 @@ public:
   }
 
   void unlock() {
-    destroy_get_clipboard_reply();
     m_mutex.unlock();
   }
 
@@ -125,8 +127,6 @@ public:
     }
     // Ask to the selection owner the available formats/atoms/targets.
     else if (owner) {
-      destroy_get_clipboard_reply();
-
       bool result =
         get_data_from_selection_owner(
           { get_atom(TARGETS) },
@@ -145,7 +145,6 @@ public:
             return false;
           });
 
-      destroy_get_clipboard_reply();
       return result;
     }
 
@@ -196,12 +195,10 @@ public:
       if (get_data_from_selection_owner(
             atoms,
             [this, buf, len, f]() -> bool {
-              uint8_t* src = (uint8_t*)xcb_get_property_value(m_reply);
-              size_t srclen = xcb_get_property_value_length(m_reply);
-              srclen = srclen * (m_reply->format/8);
-
-              size_t n = std::min(srclen, len);
-              std::copy(src, src+n, buf);
+              size_t n = std::min(len, m_reply_data->size());
+              std::copy(m_reply_data->begin(),
+                        m_reply_data->begin()+n,
+                        buf);
 
               if (f == text_format()) {
                 if (n < len)
@@ -233,8 +230,7 @@ public:
       if (!get_data_from_selection_owner(
             atoms,
             [this, &len]() -> bool {
-              len = xcb_get_property_value_length(m_reply);
-              len = len * (m_reply->format/8);
+              len = m_reply_data->size();
               return true;
             })) {
         // Error getting data length
@@ -271,10 +267,9 @@ public:
         get_data_from_selection_owner(
           { get_atom(MIME_IMAGE_PNG) },
           [this, &output_img]() -> bool {
-            const uint8_t* src = (const uint8_t*)xcb_get_property_value(m_reply);
-            size_t srclen = xcb_get_property_value_length(m_reply);
-            srclen = srclen * (m_reply->format/8);
-            return x11::read_png(src, srclen, &output_img, nullptr);
+            return x11::read_png(&(*m_reply_data)[0],
+                                 m_reply_data->size(),
+                                 &output_img, nullptr);
           })) {
       return true;
     }
@@ -289,10 +284,9 @@ public:
         get_data_from_selection_owner(
           { get_atom(MIME_IMAGE_PNG) },
           [this, &spec]() -> bool {
-            const uint8_t* src = (const uint8_t*)xcb_get_property_value(m_reply);
-            size_t srclen = xcb_get_property_value_length(m_reply);
-            srclen = srclen * (m_reply->format/8);
-            return x11::read_png(src, srclen, nullptr, &spec);
+            return x11::read_png(&(*m_reply_data)[0],
+                                 m_reply_data->size(),
+                                 nullptr, &spec);
           })) {
       return true;
     }
@@ -340,6 +334,12 @@ private:
           handle_selection_notify_event(
             (xcb_selection_notify_event_t*)event);
           break;
+
+        case XCB_PROPERTY_NOTIFY:
+          handle_property_notify_event(
+            (xcb_property_notify_event_t*)event);
+          break;
+
       }
 
       free(event);
@@ -415,50 +415,121 @@ private:
   }
 
   void handle_selection_notify_event(xcb_selection_notify_event_t* event) {
-    destroy_get_clipboard_reply();
-
     assert(event->requestor == m_window);
 
-    xcb_get_property_cookie_t cookie =
-      xcb_get_property(m_connection,
-                       true,
-                       event->requestor,
-                       event->property,
-                       event->target,
-                       0, 0x1fffffff); // 0x1fffffff = INT32_MAX / 4
+    xcb_get_property_reply_t* reply =
+      get_and_delete_property(event->requestor,
+                              event->property,
+                              m_target_atom = event->target);
+    if (reply) {
+      // In this case, We're going to receive the clipboard content in
+      // chunks of data with several PropertyNotify events.
+      if (reply->type == get_atom(INCR)) {
+        free(reply);
 
-    xcb_generic_error_t* err = nullptr;
-    m_reply = xcb_get_property_reply(m_connection, cookie, &err);
+        reply = get_and_delete_property(event->requestor,
+                                        event->property,
+                                        reply->type);
+        if (reply) {
+          if (xcb_get_property_value_length(reply) == 4) {
+            uint32_t n = *(uint32_t*)xcb_get_property_value(reply);
+            m_reply_data = std::make_shared<std::vector<uint8_t>>(n);
+            m_reply_offset = 0;
+            m_incr_process = true;
+            m_incr_received = true;
+          }
+          free(reply);
+        }
+      }
+      else {
+        // Simple case, the whole clipboard content in just one reply
+        // (without the INCR method).
+        m_reply_data.reset();
+        m_reply_offset = 0;
+        copy_reply_data(reply);
 
-    if (err) {
-      free(err);
-    }
+        call_callback(reply);
 
-    if (m_reply) {
-      if (m_callback)
-        m_callback();
-      m_cv.notify_one();
+        free(reply);
+      }
     }
   }
 
-  void destroy_get_clipboard_reply() const {
-    if (m_reply) {
-      free(m_reply);
-      m_reply = nullptr;
+  void handle_property_notify_event(xcb_property_notify_event_t* event) {
+    if (m_incr_process &&
+        event->state == XCB_PROPERTY_NEW_VALUE &&
+        event->atom == get_atom(CLIPBOARD)) {
+      xcb_get_property_reply_t* reply =
+        get_and_delete_property(event->window,
+                                event->atom,
+                                m_target_atom);
+      if (reply) {
+        m_incr_received = true;
+
+        // When the length is 0 it means that the content was
+        // completely sent by the selection owner.
+        if (xcb_get_property_value_length(reply) > 0) {
+          copy_reply_data(reply);
+        }
+        else {
+          // Now that m_reply_data has the complete clipboard content,
+          // we can call the m_callback.
+          call_callback(reply);
+          m_incr_process = false;
+        }
+        free(reply);
+      }
     }
+  }
+
+  xcb_get_property_reply_t* get_and_delete_property(xcb_window_t window,
+                                                    xcb_atom_t property,
+                                                    xcb_atom_t atom) {
+    xcb_get_property_cookie_t cookie =
+      xcb_get_property(m_connection,
+                       true,    // delete property
+                       window,
+                       property,
+                       atom,
+                       0, 0x1fffffff); // 0x1fffffff = INT32_MAX / 4
+
+    xcb_generic_error_t* err = nullptr;
+    xcb_get_property_reply_t* reply =
+      xcb_get_property_reply(m_connection, cookie, &err);
+    if (err) {
+      // TODO report error
+      free(err);
+    }
+    return reply;
+  }
+
+  // Concatenates the new data received in "reply" into "m_reply_data"
+  // buffer.
+  void copy_reply_data(xcb_get_property_reply_t* reply) {
+    const uint8_t* src = (const uint8_t*)xcb_get_property_value(reply);
+    size_t n = xcb_get_property_value_length(reply);
+    n = n * (reply->format/8);
+    if (!m_reply_data)
+      m_reply_data = std::make_shared<std::vector<uint8_t>>(n);
+    std::copy(src, src+n, m_reply_data->begin()+m_reply_offset);
+    m_reply_offset += n;
+  }
+
+  // Calls the current m_callback() to handle the clipboard content
+  // received from the owner.
+  void call_callback(xcb_get_property_reply_t* reply) {
+    m_reply = reply;
+    if (m_callback)
+      m_callback();
+
+    m_cv.notify_one();
+
+    m_reply = nullptr;
+    m_reply_data.reset();
   }
 
   bool get_data_from_selection_owner(const atoms& atoms,
                                      const notify_callback&& callback) const {
-    // Used cached reply (e.g. after a get_data_length, we can re-use
-    // the reply just to get the data itself)
-    if (m_reply) {
-      assert(callback);
-      if (callback)
-        callback();
-      return true;
-    }
-
     // Put the callback on "m_callback" so we can call it on
     // SelectionNotify event.
     m_callback = std::move(callback);
@@ -478,13 +549,22 @@ private:
 
       xcb_flush(m_connection);
 
-      // Wait a response for 100 milliseconds
-      std::cv_status status =
-        m_cv.wait_for(lock, std::chrono::milliseconds(100));
-      if (status == std::cv_status::no_timeout) {
-        // If the condition variable was notified, it means that the
-        // callback was called correctly.
-        return true;
+      // We use the "m_incr_received" to wait several timeouts in case
+      // that we've received the INCR SelectionNotify or
+      // PropertyNotify events.
+      m_incr_received = true;
+      while (m_incr_received) {
+        m_incr_received = false;
+
+        // Wait a response for 100 milliseconds
+        // TODO make this 100 configurable
+        std::cv_status status =
+          m_cv.wait_for(lock, std::chrono::milliseconds(100));
+        if (status == std::cv_status::no_timeout) {
+          // If the condition variable was notified, it means that the
+          // callback was called correctly.
+          return true;
+        }
       }
     }
 
@@ -596,6 +676,32 @@ private:
     return atoms;
   }
 
+#ifdef _DEBUG
+  // This can be used to print debugging messages.
+  std::string get_atom_name(xcb_atom_t atom) const {
+    std::string result;
+    xcb_get_atom_name_cookie_t cookie =
+      xcb_get_atom_name(m_connection, atom);
+    xcb_generic_error_t* err = nullptr;
+    xcb_get_atom_name_reply_t* reply =
+      xcb_get_atom_name_reply(m_connection, cookie, &err);
+    if (err) {
+      free(err);
+    }
+    if (reply) {
+      int len = xcb_get_atom_name_name_length(reply);
+      if (len > 0) {
+        result.resize(len);
+        char* name = xcb_get_atom_name_name(reply);
+        if (name)
+          std::copy(name, name+len, result.begin());
+      }
+      free(reply);
+    }
+    return result;
+  }
+#endif
+
   bool set_x11_selection_owner() const {
     xcb_void_cookie_t cookie =
       xcb_set_selection_owner_checked(m_connection,
@@ -643,9 +749,10 @@ private:
   // created by us just for the clipboard purpose/communication.
   std::thread m_thread;
 
-  // Internal callback used when a SelectionNotify is received. So
-  // this callback can use the notification by different purposes
-  // (e.g. get the data length only, or get the data content).
+  // Internal callback used when a SelectionNotify is received (or the
+  // whole data content is received by the INCR method). So this
+  // callback can use the notification by different purposes (e.g. get
+  // the data length only, or get/process the data content, etc.).
   mutable notify_callback m_callback;
 
   // Cache of known atoms
@@ -671,13 +778,36 @@ private:
   // we requested the clipboard content from other selection owner.
   mutable std::condition_variable m_cv;
 
-  // Cached reply for xcb_get_property_reply() when we want to get the
-  // clipboard data content/length from the current selection owner.
-  // As general rule we want to make two consecutive calls
-  // (get_data_length, and then get_data) so we can use the same
-  // xcb_get_property_reply_t for both queries.
+  // True if we have received an INCR notification so we're going to
+  // process several PropertyNotify to concatenate all data chunks.
+  bool m_incr_process;
+
+  // Variable used to wait more time if we've received an INCR
+  // notification, which means that we're going to receive large
+  // amounts of data from the selection owner.
+  mutable bool m_incr_received;
+
+  // Last reply from the selection owner. Can be used by the
+  // m_callback.
   mutable xcb_get_property_reply_t* m_reply;
 
+  // Target/selection format used in the SelectionNotify. Used in the
+  // INCR method to get data from the same property in the same format
+  // (target) on each PropertyNotify.
+  xcb_atom_t m_target_atom;
+
+  // Each time we receive data from the selection owner, we put that
+  // data in this buffer. If we get the data with the INCR method,
+  // we'll concatenate chunks of data in this buffer to complete the
+  // whole clipboard content.
+  buffer_ptr m_reply_data;
+
+  // Used to concatenate chunks of data in "m_reply_data" from several
+  // PropertyNotify when we are getting the selection owner data with
+  // the INCR method.
+  size_t m_reply_offset;
+
+  // List of user-defined formats/atoms.
   std::vector<xcb_atom_t> m_custom_formats;
 };
 
