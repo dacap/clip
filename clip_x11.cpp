@@ -131,7 +131,7 @@ public:
         get_data_from_selection_owner(
           { get_atom(TARGETS) },
           [this, &atoms]() -> bool {
-            xcb_atom_t* sel_atoms = (xcb_atom_t*)xcb_get_property_value(m_reply);
+            const xcb_atom_t* sel_atoms = (const xcb_atom_t*)xcb_get_property_value(m_reply);
             int sel_natoms = xcb_get_property_value_length(m_reply);
             auto atoms_begin = atoms.begin();
             auto atoms_end = atoms.end();
