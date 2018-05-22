@@ -419,10 +419,15 @@ private:
   void handle_selection_notify_event(xcb_selection_notify_event_t* event) {
     assert(event->requestor == m_window);
 
+    if (event->target == get_atom(TARGETS))
+      m_target_atom = get_atom(ATOM);
+    else
+      m_target_atom = event->target;
+
     xcb_get_property_reply_t* reply =
       get_and_delete_property(event->requestor,
                               event->property,
-                              m_target_atom = event->target);
+                              m_target_atom);
     if (reply) {
       // In this case, We're going to receive the clipboard content in
       // chunks of data with several PropertyNotify events.
