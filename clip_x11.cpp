@@ -7,6 +7,7 @@
 #include <xcb/xcb.h>
 
 #include <algorithm>
+#include <cassert>
 #include <condition_variable>
 #include <cstdint>
 #include <cstdlib>
@@ -55,8 +56,7 @@ public:
 
   Manager()
     : m_connection(xcb_connect(nullptr, nullptr))
-    , m_incr_process(false)
-    , m_reply(nullptr) {
+    , m_incr_process(false) {
     xcb_screen_t* screen =
       xcb_setup_roots_iterator(xcb_get_setup(m_connection)).data;
 
@@ -131,8 +131,12 @@ public:
         get_data_from_selection_owner(
           { get_atom(TARGETS) },
           [this, &atoms]() -> bool {
-            const xcb_atom_t* sel_atoms = (const xcb_atom_t*)xcb_get_property_value(m_reply);
-            int sel_natoms = xcb_get_property_value_length(m_reply);
+            assert(m_reply_data);
+            if (!m_reply_data)
+              return false;
+
+            const xcb_atom_t* sel_atoms = (const xcb_atom_t*)&(*m_reply_data)[0];
+            int sel_natoms = m_reply_data->size() / sizeof(xcb_atom_t);
             auto atoms_begin = atoms.begin();
             auto atoms_end = atoms.end();
             for (int i=0; i<sel_natoms; ++i) {
@@ -526,13 +530,11 @@ private:
   // received from the owner.
   void call_callback(xcb_get_property_reply_t* reply) {
     m_callback_result = false;
-    m_reply = reply;
     if (m_callback)
       m_callback_result = m_callback();
 
     m_cv.notify_one();
 
-    m_reply = nullptr;
     m_reply_data.reset();
   }
 
@@ -801,10 +803,6 @@ private:
   // notification, which means that we're going to receive large
   // amounts of data from the selection owner.
   mutable bool m_incr_received;
-
-  // Last reply from the selection owner. Can be used by the
-  // m_callback.
-  mutable xcb_get_property_reply_t* m_reply;
 
   // Target/selection format used in the SelectionNotify. Used in the
   // INCR method to get data from the same property in the same format
