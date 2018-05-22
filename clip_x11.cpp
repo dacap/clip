@@ -562,8 +562,7 @@ private:
       // We use the "m_incr_received" to wait several timeouts in case
       // that we've received the INCR SelectionNotify or
       // PropertyNotify events.
-      m_incr_received = true;
-      while (m_incr_received) {
+      do {
         m_incr_received = false;
 
         // Wait a response for 100 milliseconds
@@ -575,7 +574,7 @@ private:
           // callback was called correctly.
           return m_callback_result;
         }
-      }
+      } while (m_incr_received);
     }
 
     // Reset callback
