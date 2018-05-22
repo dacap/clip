@@ -127,7 +127,7 @@ public:
     }
     // Ask to the selection owner the available formats/atoms/targets.
     else if (owner) {
-      bool result =
+      return
         get_data_from_selection_owner(
           { get_atom(TARGETS) },
           [this, &atoms]() -> bool {
@@ -144,8 +144,6 @@ public:
             }
             return false;
           });
-
-      return result;
     }
 
     return false;
