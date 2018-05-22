@@ -509,8 +509,17 @@ private:
     const uint8_t* src = (const uint8_t*)xcb_get_property_value(reply);
     size_t n = xcb_get_property_value_length(reply);
     n = n * (reply->format/8);
-    if (!m_reply_data)
-      m_reply_data = std::make_shared<std::vector<uint8_t>>(n);
+
+    size_t req = m_reply_offset+n;
+    if (!m_reply_data) {
+      m_reply_data = std::make_shared<std::vector<uint8_t>>(req);
+    }
+    // The "m_reply_data" size can be smaller because the size
+    // specified in INCR property is just a lower bound.
+    else if (req > m_reply_data->size()) {
+      m_reply_data->resize(req);
+    }
+
     std::copy(src, src+n, m_reply_data->begin()+m_reply_offset);
     m_reply_offset += n;
   }
