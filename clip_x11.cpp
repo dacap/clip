@@ -527,9 +527,10 @@ private:
   // Calls the current m_callback() to handle the clipboard content
   // received from the owner.
   void call_callback(xcb_get_property_reply_t* reply) {
+    m_callback_result = false;
     m_reply = reply;
     if (m_callback)
-      m_callback();
+      m_callback_result = m_callback();
 
     m_cv.notify_one();
 
@@ -572,7 +573,7 @@ private:
         if (status == std::cv_status::no_timeout) {
           // If the condition variable was notified, it means that the
           // callback was called correctly.
-          return true;
+          return m_callback_result;
         }
       }
     }
@@ -763,6 +764,14 @@ private:
   // callback can use the notification by different purposes (e.g. get
   // the data length only, or get/process the data content, etc.).
   mutable notify_callback m_callback;
+
+  // Result returned by the m_callback. Used as return value in the
+  // get_data_from_selection_owner() function. For example, if the
+  // callback must read a "image/png" file from the clipboard data and
+  // fails, the callback can return false and finally the get_image()
+  // will return false (i.e. there is data, but it's not a valid image
+  // format).
+  bool m_callback_result;
 
   // Cache of known atoms
   mutable std::map<std::string, xcb_atom_t> m_atoms;
