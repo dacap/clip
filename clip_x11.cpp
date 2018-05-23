@@ -111,6 +111,7 @@ public:
 
   void clear() {
     m_data.clear();
+    m_image.reset();
   }
 
   bool is_convertible(format f) const {
@@ -246,20 +247,18 @@ public:
   }
 
   bool set_image(const image& image) {
-#ifdef HAVE_PNG_H
     if (!set_x11_selection_owner())
       return false;
 
-    std::vector<uint8_t> output;
-    x11::write_png(image, output);
+    m_image = image;
 
-    buffer_ptr shared_data_buf = std::make_shared<std::vector<uint8_t>>(std::move(output));
-    xcb_atom_t atom = get_atom(MIME_IMAGE_PNG);
-    m_data[atom] = shared_data_buf;
-    return true;
-#else
-    return false;
+#ifdef HAVE_PNG_H
+    // Put a nullptr in the m_data for image/png format and then we'll
+    // encode the png data when the image is requested in this format.
+    m_data[get_atom(MIME_IMAGE_PNG)] = buffer_ptr();
 #endif
+
+    return true;
   }
 
   bool get_image(image& output_img) const {
@@ -379,6 +378,17 @@ private:
     else {
       auto it = m_data.find(event->target);
       if (it != m_data.end()) {
+        // This can be null of the data was set from an image but we
+        // didn't encode the image yet (e.g. to image/png format).
+        if (!it->second) {
+          encode_data_on_demand(*it);
+
+          // Return nothing, the given "target" cannot be constructed
+          // (maybe by some encoding error).
+          if (!it->second)
+            return;
+        }
+
         // Set the "property" of "requestor" with the
         // clipboard content in the requested format ("target").
         xcb_change_property(
@@ -755,6 +765,24 @@ private:
       return 0;
   }
 
+  void encode_data_on_demand(std::pair<const xcb_atom_t, buffer_ptr>& e) {
+#ifdef HAVE_PNG_H
+    if (e.first == get_atom(MIME_IMAGE_PNG)) {
+      assert(m_image.is_valid());
+      if (!m_image.is_valid())
+        return;
+
+      std::vector<uint8_t> output;
+      if (x11::write_png(m_image, output)) {
+        e.second =
+          std::make_shared<std::vector<uint8_t>>(
+            std::move(output));
+      }
+      // else { TODO report png conversion errors }
+    }
+#endif
+  }
+
   xcb_connection_t* m_connection;
   xcb_window_t m_window;
 
@@ -792,6 +820,12 @@ private:
   // selection, and in case of SelectionRequest events, we've to
   // return the data stored in this "m_data" field)
   mutable std::map<xcb_atom_t, buffer_ptr> m_data;
+
+  // Copied image in the clipboard. As we have to transfer the image
+  // in some specific format (e.g. image/png) we want to keep a copy
+  // of the image and make the conversion when the clipboard data is
+  // requested by other process.
+  mutable image m_image;
 
   // Access to the whole Manager
   mutable std::mutex m_mutex;

@@ -10,7 +10,7 @@ if(UNIX AND NOT APPLE)
 endif()
 
 include_directories(.)
-set(CLIP_SOURCES clip.cpp)
+set(CLIP_SOURCES clip.cpp image.cpp)
 
 if(CMAKE_BUILD_TYPE STREQUAL Debug)
   add_definitions(-D_DEBUG)

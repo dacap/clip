@@ -124,36 +124,30 @@ namespace clip {
   // Details: Windows expects premultiplied images on its clipboard
   // content, so the library code make the proper conversion
   // automatically. macOS handles straight alpha directly, so there is
-  // no conversion at all.
+  // no conversion at all. Linux/X11 images are transferred in
+  // image/png format which are specified in straight alpha.
   class image {
   public:
-    // Constructor to use get_image()
-    image() : m_own_data(false), m_data(nullptr) {
-    }
+    image();
+    image(const image_spec& spec);
+    image(const void* data, const image_spec& spec);
+    image(const image& image);
+    image(image&& image);
+    ~image();
 
-    // Constructors to use set_image()
-    image(const image_spec& spec)
-      : m_own_data(true),
-        m_data(new char[spec.bytes_per_row*spec.height]),
-        m_spec(spec) {
-    }
-    image(const void* data, const image_spec& spec)
-      : m_own_data(false),
-        m_data((char*)data),
-        m_spec(spec) {
-    }
-
-    ~image() {
-      if (m_own_data) {
-        delete[] m_data;
-        m_data = nullptr;
-      }
-    }
+    image& operator=(const image& image);
+    image& operator=(image&& image);
 
     char* data() const { return m_data; }
     const image_spec& spec() const { return m_spec; }
 
+    bool is_valid() const { return m_data != nullptr; }
+    void reset();
+
   private:
+    void copy_image(const image& image);
+    void move_image(image&& image);
+
     bool m_own_data;
     char* m_data;
     image_spec m_spec;
