@@ -161,4 +161,13 @@ error_handler get_error_handler() {
   return g_error_handler;
 }
 
+#ifdef HAVE_XCB_XLIB_H
+static int g_x11_timeout = 1000;
+void set_x11_wait_timeout(int msecs) { g_x11_timeout = msecs; }
+int get_x11_wait_timeout() { return g_x11_timeout; }
+#else
+void set_x11_wait_timeout(int) { }
+int get_x11_wait_timeout() { return 1000; }
+#endif
+
 } // namespace clip

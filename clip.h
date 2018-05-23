@@ -159,6 +159,16 @@ namespace clip {
   bool get_image(image& img);
   bool get_image_spec(image_spec& spec);
 
+  // ======================================================================
+  // Platform-specific
+  // ======================================================================
+
+  // Only for X11: Sets the time (in milliseconds) that we must wait
+  // for the selection/clipboard owner to receive the content. This
+  // value is 1000 (one second) by default.
+  void set_x11_wait_timeout(int msecs);
+  int get_x11_wait_timeout();
+
 } // namespace clip
 
 #endif // CLIP_H_INCLUDED

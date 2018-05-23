@@ -581,9 +581,9 @@ private:
         m_incr_received = false;
 
         // Wait a response for 100 milliseconds
-        // TODO make this 100 configurable
         std::cv_status status =
-          m_cv.wait_for(lock, std::chrono::milliseconds(100));
+          m_cv.wait_for(lock,
+                        std::chrono::milliseconds(get_x11_wait_timeout()));
         if (status == std::cv_status::no_timeout) {
           // If the condition variable was notified, it means that the
           // callback was called correctly.
