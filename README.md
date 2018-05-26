@@ -1,7 +1,8 @@
 # Clip Library
 *Copyright (C) 2015-2018 David Capello*
 
-> Distributed under [MIT license](LICENSE.txt)
+[![Build Status](https://travis-ci.org/dacap/clip.svg)](https://travis-ci.org/dacap/clip)
+[![MIT Licensed](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE.txt)
 
 Library to copy/retrieve content to/from the clipboard/pasteboard.
 
