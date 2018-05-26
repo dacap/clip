@@ -2,6 +2,7 @@
 *Copyright (C) 2015-2018 David Capello*
 
 [![Build Status](https://travis-ci.org/dacap/clip.svg)](https://travis-ci.org/dacap/clip)
+[![Build status](https://ci.appveyor.com/api/projects/status/iyory4t5oop7ssrs?svg=true)](https://ci.appveyor.com/project/dacap/clip)
 [![MIT Licensed](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE.txt)
 
 Library to copy/retrieve content to/from the clipboard/pasteboard.
