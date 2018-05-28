@@ -21,3 +21,4 @@ build_script:
   - cd build
   - cmake .. -G "NMake Makefiles"
   - nmake
+  - ctest --output-on-failure

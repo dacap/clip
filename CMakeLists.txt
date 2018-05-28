@@ -5,6 +5,7 @@ cmake_minimum_required(VERSION 2.6)
 
 project(clip)
 option(CLIP_EXAMPLES "Compile clip examples" on)
+option(CLIP_TESTS "Compile clip tests" on)
 if(UNIX AND NOT APPLE)
   option(CLIP_X11_WITH_PNG "Compile with libpng to support copy/paste image in png format" on)
 endif()
@@ -70,4 +71,9 @@ endif()
 
 if(CLIP_EXAMPLES)
   add_subdirectory(examples)
+endif()
+
+if(CLIP_TESTS)
+  enable_testing()
+  add_subdirectory(tests)
 endif()
