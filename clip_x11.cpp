@@ -790,6 +790,13 @@ private:
   xcb_connection_t* m_connection;
   xcb_window_t m_window;
 
+  // Access to the whole Manager
+  mutable std::mutex m_mutex;
+
+  // Used to wait/notify the arrival of the SelectionNotify event when
+  // we requested the clipboard content from other selection owner.
+  mutable std::condition_variable m_cv;
+
   // Thread used to run a background message loop to wait X11 events
   // about clipboard. The X11 selection owner will be a hidden window
   // created by us just for the clipboard purpose/communication.
@@ -830,13 +837,6 @@ private:
   // of the image and make the conversion when the clipboard data is
   // requested by other process.
   mutable image m_image;
-
-  // Access to the whole Manager
-  mutable std::mutex m_mutex;
-
-  // Used to wait/notify the arrival of the SelectionNotify event when
-  // we requested the clipboard content from other selection owner.
-  mutable std::condition_variable m_cv;
 
   // True if we have received an INCR notification so we're going to
   // process several PropertyNotify to concatenate all data chunks.
