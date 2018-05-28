@@ -191,7 +191,7 @@ public:
           if (f == text_format()) {
             // Add an extra null char
             if (n < len)
-              (*it->second)[n++] = 0;
+              buf[n] = 0;
           }
 
           return true;
