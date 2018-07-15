@@ -8,3 +8,4 @@ function(add_clip_test name)
 endfunction()
 
 add_clip_test(text_tests)
+add_clip_test(user_format_tests)
