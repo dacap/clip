@@ -70,7 +70,7 @@ int main(int argc, char** argv)
     EXPECT_TRUE(l.get_data(text_format(), (char*)buf, 11));
     EXPECT_TRUE(l.get_data(intF, (char*)&intV, sizeof(int)));
     EXPECT_TRUE(l.get_data(doubleF, (char*)&doubleV, sizeof(double)));
-    EXPECT_TRUE(std::strcmp(buf, "thirty-two") == 0);
+    EXPECT_EQ("thirty-two", std::string(buf));
     EXPECT_EQ(32, intV);
     EXPECT_EQ(32.48, doubleV);
   }
