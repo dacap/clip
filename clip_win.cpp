@@ -155,13 +155,13 @@ bool lock::impl::get_data(format f, char* buf, size_t len) const {
         LPWSTR lpstr = static_cast<LPWSTR>(GlobalLock(hglobal));
         if (lpstr) {
           size_t reqsize =
-            WideCharToMultiByte(CP_UTF8, 0, lpstr, wcslen(lpstr),
-                                NULL, 0, NULL, NULL) + 1;
+            WideCharToMultiByte(CP_UTF8, 0, lpstr, -1,
+                                nullptr, 0, nullptr, nullptr);
 
           assert(reqsize <= len);
           if (reqsize <= len) {
-            WideCharToMultiByte(CP_UTF8, 0, lpstr, wcslen(lpstr),
-                                buf, reqsize, NULL, NULL);
+            WideCharToMultiByte(CP_UTF8, 0, lpstr, -1,
+                                buf, reqsize, nullptr, nullptr);
             result = true;
           }
           GlobalUnlock(hglobal);
@@ -212,8 +212,8 @@ size_t lock::impl::get_data_length(format f) const {
         LPWSTR lpstr = static_cast<LPWSTR>(GlobalLock(hglobal));
         if (lpstr) {
           len =
-            WideCharToMultiByte(CP_UTF8, 0, lpstr, wcslen(lpstr),
-                                NULL, 0, NULL, NULL) + 1;
+            WideCharToMultiByte(CP_UTF8, 0, lpstr, -1,
+                                nullptr, 0, nullptr, nullptr);
           GlobalUnlock(hglobal);
         }
       }

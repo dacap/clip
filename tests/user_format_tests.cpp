@@ -67,6 +67,7 @@ int main(int argc, char** argv)
     int intV = 0;
     double doubleV = 0.0;
     char buf[11];
+    EXPECT_EQ(11, l.get_data_length(text_format()));
     EXPECT_TRUE(l.get_data(text_format(), (char*)buf, 11));
     EXPECT_TRUE(l.get_data(intF, (char*)&intV, sizeof(int)));
     EXPECT_TRUE(l.get_data(doubleF, (char*)&doubleV, sizeof(double)));
