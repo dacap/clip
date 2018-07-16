@@ -161,6 +161,25 @@ public:
   void clear() {
     m_data.clear();
     m_image.reset();
+
+    // Clear the clipboard data from the selection owner
+    const xcb_window_t owner = get_x11_selection_owner();
+    if (m_window != owner) {
+      xcb_selection_clear_event_t event;
+      event.response_type = XCB_SELECTION_CLEAR;
+      event.pad0          = 0;
+      event.sequence      = 0;
+      event.time          = XCB_CURRENT_TIME;
+      event.owner         = owner;
+      event.selection     = get_atom(CLIPBOARD);
+
+      xcb_send_event(m_connection, false,
+                     owner,
+                     XCB_EVENT_MASK_NO_EVENT,
+                     (const char*)&event);
+
+      xcb_flush(m_connection);
+    }
   }
 
   bool is_convertible(format f) const {
