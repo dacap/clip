@@ -158,9 +158,14 @@ public:
     m_mutex.unlock();
   }
 
-  void clear() {
+  // Clear our data
+  void clear_data() {
     m_data.clear();
     m_image.reset();
+  }
+
+  void clear() {
+    clear_data();
 
     // Clear the clipboard data from the selection owner
     const xcb_window_t owner = get_x11_selection_owner();
@@ -430,7 +435,7 @@ private:
   void handle_selection_clear_event(xcb_selection_clear_event_t* event) {
     if (event->selection == get_atom(CLIPBOARD)) {
       std::lock_guard<std::mutex> lock(m_mutex);
-      clear(); // Clear our clipboard data
+      clear_data(); // Clear our clipboard data
     }
   }
 
