@@ -274,16 +274,22 @@ public:
   }
 
   bool get_image(image& output_img) const {
-#ifdef HAVE_PNG_H
     const xcb_window_t owner = get_x11_selection_owner();
-    if (owner &&
-        get_data_from_selection_owner(
-          { get_atom(MIME_IMAGE_PNG) },
-          [this, &output_img]() -> bool {
-            return x11::read_png(&(*m_reply_data)[0],
-                                 m_reply_data->size(),
-                                 &output_img, nullptr);
-          })) {
+    if (owner == m_window) {
+      if (m_image.is_valid()) {
+        output_img = m_image;
+        return true;
+      }
+    }
+#ifdef HAVE_PNG_H
+    else if (owner &&
+             get_data_from_selection_owner(
+               { get_atom(MIME_IMAGE_PNG) },
+               [this, &output_img]() -> bool {
+                 return x11::read_png(&(*m_reply_data)[0],
+                                      m_reply_data->size(),
+                                      &output_img, nullptr);
+               })) {
       return true;
     }
 #endif
@@ -291,16 +297,22 @@ public:
   }
 
   bool get_image_spec(image_spec& spec) const {
-#ifdef HAVE_PNG_H
     const xcb_window_t owner = get_x11_selection_owner();
-    if (owner &&
-        get_data_from_selection_owner(
-          { get_atom(MIME_IMAGE_PNG) },
-          [this, &spec]() -> bool {
-            return x11::read_png(&(*m_reply_data)[0],
-                                 m_reply_data->size(),
-                                 nullptr, &spec);
-          })) {
+    if (owner == m_window) {
+      if (m_image.is_valid()) {
+        spec = m_image.spec();
+        return true;
+      }
+    }
+#ifdef HAVE_PNG_H
+    else if (owner &&
+             get_data_from_selection_owner(
+               { get_atom(MIME_IMAGE_PNG) },
+               [this, &spec]() -> bool {
+                 return x11::read_png(&(*m_reply_data)[0],
+                                      m_reply_data->size(),
+                                      nullptr, &spec);
+               })) {
       return true;
     }
 #endif
