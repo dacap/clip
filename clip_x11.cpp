@@ -570,7 +570,10 @@ private:
     // Put the callback on "m_callback" so we can call it on
     // SelectionNotify event.
     m_callback = std::move(callback);
-    m_data.clear();
+
+    // Clear data if we are not the selection owner.
+    if (m_window != get_x11_selection_owner())
+      m_data.clear();
 
     std::unique_lock<std::mutex> lock(m_mutex, std::adopt_lock);
 
