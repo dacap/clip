@@ -548,8 +548,8 @@ private:
   // buffer.
   void copy_reply_data(xcb_get_property_reply_t* reply) {
     const uint8_t* src = (const uint8_t*)xcb_get_property_value(reply);
+    // n = length of "src" in bytes
     size_t n = xcb_get_property_value_length(reply);
-    n = n / (reply->format/8);
 
     size_t req = m_reply_offset+n;
     if (!m_reply_data) {
