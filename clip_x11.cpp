@@ -477,10 +477,17 @@ private:
           xcb_atom_t target = *ptr++;
           xcb_atom_t property = *ptr++;
 
-          set_requestor_property_with_clipboard_content(
-            event->requestor,
-            property,
-            target);
+          if (!set_requestor_property_with_clipboard_content(
+                event->requestor,
+                property,
+                target)) {
+            xcb_change_property(
+              m_connection,
+              XCB_PROP_MODE_REPLACE,
+              event->requestor,
+              event->property,
+              XCB_ATOM_NONE, 0, 0, nullptr);
+          }
         }
 
         free(reply);
