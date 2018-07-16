@@ -26,6 +26,8 @@
   #include "clip_x11_png.h"
 #endif
 
+#define CLIP_SUPPORT_SAVE_TARGETS 1
+
 namespace clip {
 
 namespace {
@@ -38,6 +40,12 @@ enum CommonAtom {
 #ifdef HAVE_PNG_H
   MIME_IMAGE_PNG,
 #endif
+#ifdef CLIP_SUPPORT_SAVE_TARGETS
+  ATOM_PAIR,
+  SAVE_TARGETS,
+  MULTIPLE,
+  CLIPBOARD_MANAGER,
+#endif
 };
 
 const char* kCommonAtomNames[] = {
@@ -47,6 +55,12 @@ const char* kCommonAtomNames[] = {
   "CLIPBOARD",
 #ifdef HAVE_PNG_H
   "image/png",
+#endif
+#ifdef CLIP_SUPPORT_SAVE_TARGETS
+  "ATOM_PAIR",
+  "SAVE_TARGETS",
+  "MULTIPLE",
+  "CLIPBOARD_MANAGER",
 #endif
 };
 
@@ -63,7 +77,6 @@ public:
     , m_incr_process(false) {
     xcb_screen_t* screen =
       xcb_setup_roots_iterator(xcb_get_setup(m_connection)).data;
-
 
     uint32_t event_mask =
       // Just in case that some program reports SelectionNotify events
@@ -89,11 +102,35 @@ public:
   }
 
   ~Manager() {
+#ifdef CLIP_SUPPORT_SAVE_TARGETS
     if (!m_data.empty() &&
         m_window &&
         m_window == get_x11_selection_owner()) {
-      // TODO create some method to keep the clipboard alive.
+      // Check if there is a CLIPBOARD_MANAGER running to save all
+      // targets before we exit.
+      xcb_window_t x11_clipboard_manager = 0;
+      xcb_get_selection_owner_cookie_t cookie =
+        xcb_get_selection_owner(m_connection,
+                                get_atom(CLIPBOARD_MANAGER));
+
+      xcb_get_selection_owner_reply_t* reply =
+        xcb_get_selection_owner_reply(m_connection, cookie, nullptr);
+      if (reply) {
+        x11_clipboard_manager = reply->owner;
+        free(reply);
+      }
+
+      if (x11_clipboard_manager) {
+        // Start the SAVE_TARGETS mechanism so the X11
+        // CLIPBOARD_MANAGER will save our clipboard data
+        // from now on.
+        get_data_from_selection_owner(
+          { get_atom(SAVE_TARGETS) },
+          [this]() -> bool { return true; },
+          get_atom(CLIPBOARD_MANAGER));
+      }
     }
+#endif
 
     if (m_window) {
       xcb_destroy_window(m_connection, m_window);
@@ -384,6 +421,10 @@ private:
     if (event->target == get_atom(TARGETS)) {
       atoms targets;
       targets.push_back(get_atom(TARGETS));
+#ifdef CLIP_SUPPORT_SAVE_TARGETS
+      targets.push_back(get_atom(SAVE_TARGETS));
+      targets.push_back(get_atom(MULTIPLE));
+#endif
       for (const auto& it : m_data)
         targets.push_back(it.first);
 
@@ -399,34 +440,39 @@ private:
         targets.size(),
         &targets[0]);
     }
-    else {
-      auto it = m_data.find(event->target);
-      if (it != m_data.end()) {
-        // This can be null of the data was set from an image but we
-        // didn't encode the image yet (e.g. to image/png format).
-        if (!it->second) {
-          encode_data_on_demand(*it);
+#ifdef CLIP_SUPPORT_SAVE_TARGETS
+    else if (event->target == get_atom(SAVE_TARGETS)) {
+      // Do nothing
+    }
+    else if (event->target == get_atom(MULTIPLE)) {
+      xcb_get_property_reply_t* reply =
+        get_and_delete_property(event->requestor,
+                                event->property,
+                                get_atom(ATOM_PAIR),
+                                false);
+      if (reply) {
+        for (xcb_atom_t
+               *ptr=(xcb_atom_t*)xcb_get_property_value(reply),
+               *end=ptr + (xcb_get_property_value_length(reply)/sizeof(xcb_atom_t));
+             ptr<end; ) {
+          xcb_atom_t target = *ptr++;
+          xcb_atom_t property = *ptr++;
 
-          // Return nothing, the given "target" cannot be constructed
-          // (maybe by some encoding error).
-          if (!it->second)
-            return;
+          set_requestor_property_with_clipboard_content(
+            event->requestor,
+            property,
+            target);
         }
 
-        // Set the "property" of "requestor" with the
-        // clipboard content in the requested format ("target").
-        xcb_change_property(
-          m_connection,
-          XCB_PROP_MODE_REPLACE,
-          event->requestor,
-          event->property,
-          event->target,
-          8,
-          it->second->size(),
-          &(*it->second)[0]);
+        free(reply);
       }
-      else {
-        // Nothing to do (unsupported target)
+    }
+#endif // CLIP_SUPPORT_SAVE_TARGETS
+    else {
+      if (!set_requestor_property_with_clipboard_content(
+            event->requestor,
+            event->property,
+            event->target)) {
         return;
       }
     }
@@ -448,6 +494,40 @@ private:
                    (const char*)&notify);
 
     xcb_flush(m_connection);
+  }
+
+  bool set_requestor_property_with_clipboard_content(const xcb_atom_t requestor,
+                                                     const xcb_atom_t property,
+                                                     const xcb_atom_t target) {
+    auto it = m_data.find(target);
+    if (it == m_data.end()) {
+      // Nothing to do (unsupported target)
+      return false;
+    }
+
+    // This can be null of the data was set from an image but we
+    // didn't encode the image yet (e.g. to image/png format).
+    if (!it->second) {
+      encode_data_on_demand(*it);
+
+      // Return nothing, the given "target" cannot be constructed
+      // (maybe by some encoding error).
+      if (!it->second)
+        return false;
+    }
+
+    // Set the "property" of "requestor" with the
+    // clipboard content in the requested format ("target").
+    xcb_change_property(
+      m_connection,
+      XCB_PROP_MODE_REPLACE,
+      requestor,
+      property,
+      target,
+      8,
+      it->second->size(),
+      &(*it->second)[0]);
+    return true;
   }
 
   void handle_selection_notify_event(xcb_selection_notify_event_t* event) {
@@ -525,10 +605,11 @@ private:
 
   xcb_get_property_reply_t* get_and_delete_property(xcb_window_t window,
                                                     xcb_atom_t property,
-                                                    xcb_atom_t atom) {
+                                                    xcb_atom_t atom,
+                                                    bool delete_prop = true) {
     xcb_get_property_cookie_t cookie =
       xcb_get_property(m_connection,
-                       true,    // delete property
+                       delete_prop,
                        window,
                        property,
                        atom,
@@ -578,7 +659,11 @@ private:
   }
 
   bool get_data_from_selection_owner(const atoms& atoms,
-                                     const notify_callback&& callback) const {
+                                     const notify_callback&& callback,
+                                     xcb_atom_t selection = 0) const {
+    if (!selection)
+      selection = get_atom(CLIPBOARD);
+
     // Put the callback on "m_callback" so we can call it on
     // SelectionNotify event.
     m_callback = std::move(callback);
@@ -594,7 +679,7 @@ private:
     for (xcb_atom_t atom : atoms) {
       xcb_convert_selection(m_connection,
                             m_window, // Send us the result
-                            get_atom(CLIPBOARD), // Clipboard selection
+                            selection, // Clipboard selection
                             atom, // The clipboard format that we're requesting
                             get_atom(CLIPBOARD), // Leave result in this window's property
                             XCB_CURRENT_TIME);
