@@ -9,6 +9,7 @@
 #pragma once
 
 #include <cassert>
+#include <memory>
 #include <string>
 
 namespace clip {
@@ -57,7 +58,7 @@ namespace clip {
 
   private:
     class impl;
-    impl* p;
+    std::unique_ptr<impl> p;
   };
 
   format register_format(const std::string& name);

@@ -30,9 +30,7 @@ lock::lock(void* native_window_handle)
   : p(new impl(native_window_handle)) {
 }
 
-lock::~lock() {
-  delete p;
-}
+lock::~lock() = default;
 
 bool lock::locked() const {
   return p->locked();
