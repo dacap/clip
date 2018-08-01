@@ -4,6 +4,10 @@
 cmake_minimum_required(VERSION 2.6)
 
 project(clip)
+
+set(CMAKE_CXX_STANDARD 11)
+set(CMAKE_CXX_STANDARD_REQUIRED On)
+
 option(CLIP_EXAMPLES "Compile clip examples" on)
 option(CLIP_TESTS "Compile clip tests" on)
 if(UNIX AND NOT APPLE)
@@ -17,12 +21,9 @@ if(WIN32)
   add_definitions(-D_SCL_SECURE_NO_WARNINGS)
   list(APPEND CLIP_SOURCES clip_win.cpp)
 elseif(APPLE)
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11 -stdlib=libc++")
   add_definitions(-fobjc-arc)
   list(APPEND CLIP_SOURCES clip_osx.mm)
 elseif(UNIX)
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
-
   include(CheckIncludeFiles)
   check_include_files(xcb/xcb.h HAVE_XCB_XLIB_H)
 
