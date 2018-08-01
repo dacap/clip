@@ -105,18 +105,18 @@ namespace clip {
   // ======================================================================
 
   struct image_spec {
-    unsigned long width;
-    unsigned long height;
-    unsigned long bits_per_pixel;
-    unsigned long bytes_per_row;
-    unsigned long red_mask;
-    unsigned long green_mask;
-    unsigned long blue_mask;
-    unsigned long alpha_mask;
-    unsigned long red_shift;
-    unsigned long green_shift;
-    unsigned long blue_shift;
-    unsigned long alpha_shift;
+    unsigned long width{};
+    unsigned long height{};
+    unsigned long bits_per_pixel{};
+    unsigned long bytes_per_row{};
+    unsigned long red_mask{};
+    unsigned long green_mask{};
+    unsigned long blue_mask{};
+    unsigned long alpha_mask{};
+    unsigned long red_shift{};
+    unsigned long green_shift{};
+    unsigned long blue_shift{};
+    unsigned long alpha_shift{};
   };
 
   // The image data must contain straight RGB values

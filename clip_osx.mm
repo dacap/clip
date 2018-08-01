@@ -48,7 +48,6 @@ namespace {
     }
 
     image_spec spec;
-    memset(&spec, 0, sizeof(spec));
     spec.width = bitmap.pixelsWide;
     spec.height = bitmap.pixelsHigh;
     spec.bits_per_pixel = bitmap.bitsPerPixel;

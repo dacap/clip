@@ -493,7 +493,6 @@ bool lock::impl::get_image_spec(image_spec& spec) const {
   int w = bi->bmiHeader.biWidth;
   int h = bi->bmiHeader.biHeight;
 
-  memset(&spec, 0, sizeof(spec));
   spec.width = w;
   spec.height = (h >= 0 ? h: -h);
   // We convert indexed to 24bpp RGB images to match the OS X behavior
