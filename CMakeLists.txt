@@ -17,12 +17,6 @@ endif()
 include_directories(.)
 set(CLIP_SOURCES clip.cpp image.cpp)
 
-if(CMAKE_BUILD_TYPE STREQUAL Debug)
-  add_definitions(-D_DEBUG)
-else()
-  add_definitions(-DNDEBUG)
-endif()
-
 if(WIN32)
   add_definitions(-D_SCL_SECURE_NO_WARNINGS)
   list(APPEND CLIP_SOURCES clip_win.cpp)
