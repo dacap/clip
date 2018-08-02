@@ -51,6 +51,7 @@ else()
 endif()
 
 add_library(clip ${CLIP_SOURCES})
+target_compile_definitions(clip PRIVATE $<$<CONFIG:Debug>:_DEBUG>)
 
 if(APPLE)
   find_library(COCOA_LIBRARY Cocoa)
