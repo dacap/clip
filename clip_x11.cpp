@@ -843,7 +843,7 @@ private:
     return atoms;
   }
 
-#ifdef _DEBUG
+#if !defined(NDEBUG)
   // This can be used to print debugging messages.
   std::string get_atom_name(xcb_atom_t atom) const {
     std::string result;
