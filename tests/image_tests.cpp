@@ -42,7 +42,6 @@ int main(int argc, char** argv)
 
   {
     image_spec spec;
-    std::memset(&spec, 0, sizeof(spec));
     EXPECT_TRUE(get_image_spec(spec));
     EXPECT_EQ(3, spec.width);
     EXPECT_EQ(2, spec.height);
