@@ -6,7 +6,13 @@ cmake_minimum_required(VERSION 3.1.2)
 project(clip)
 
 set(CMAKE_CXX_STANDARD 11)
-set(CMAKE_CXX_STANDARD_REQUIRED On)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+
+if(CMAKE_CXX_COMPILER_ID STREQUAL "AppleClang")
+  # Use libc++ explicitly so we can compile for
+  # CMAKE_OSX_DEPLOYMENT_TARGET=10.7 or 10.8
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -stdlib=libc++")
+endif()
 
 option(CLIP_EXAMPLES "Compile clip examples" on)
 option(CLIP_TESTS "Compile clip tests" on)
