@@ -48,7 +48,13 @@ int main() {
 }
 ```
 
-* [Limited number of clipboard formats on Windows](http://blogs.msdn.com/b/oldnewthing/archive/2015/03/19/10601208.aspx)
+## Platform specific details
+
+* **Windows**:
+  - [Limited number of clipboard formats on Windows](http://blogs.msdn.com/b/oldnewthing/archive/2015/03/19/10601208.aspx)
+* **Linux**:
+  - To be able to copy/paste on Linux you need `libx11-dev`/`libX11-devel` package.
+  - To copy/paste images you will need `libpng-dev`/`libpng-devel` package.
 
 ## Who is using this library?
 
