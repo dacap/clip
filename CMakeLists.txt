@@ -8,6 +8,12 @@ project(clip)
 set(CMAKE_CXX_STANDARD 11)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
+# Modules
+list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake/")
+if (WIN32)
+  include(ChooseMSVCCRT)
+endif()
+
 if(CMAKE_CXX_COMPILER_ID STREQUAL "AppleClang")
   # Use libc++ explicitly so we can compile for
   # CMAKE_OSX_DEPLOYMENT_TARGET=10.7 or 10.8
