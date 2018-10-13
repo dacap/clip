@@ -97,7 +97,9 @@ variables (CLIP_USE_CRT_DEBUG, etc) instead.")
   endforeach(build_type)
 endmacro(choose_msvc_crt MSVC_CRT)
 
-string(TOUPPER ${CMAKE_BUILD_TYPE} build)
+if(CMAKE_BUILD_TYPE)
+  string(TOUPPER ${CMAKE_BUILD_TYPE} build)
+endif()
 set(CLIP_CRT "/${CLIP_USE_CRT_${build}}")
 message(STATUS "CLIP_CRT: ${CLIP_CRT}")
 # List of valid CRTs for MSVC
