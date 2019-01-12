@@ -74,9 +74,18 @@ public:
 
   Manager()
     : m_connection(xcb_connect(nullptr, nullptr))
+    , m_window(0)
     , m_incr_process(false) {
-    xcb_screen_t* screen =
-      xcb_setup_roots_iterator(xcb_get_setup(m_connection)).data;
+    if (!m_connection)
+      return;
+
+    const xcb_setup_t* setup = xcb_get_setup(m_connection);
+    if (!setup)
+      return;
+
+    xcb_screen_t* screen = xcb_setup_roots_iterator(setup).data;
+    if (!screen)
+      return;
 
     uint32_t event_mask =
       // Just in case that some program reports SelectionNotify events
@@ -137,9 +146,11 @@ public:
       xcb_flush(m_connection);
     }
 
-    m_thread.join();
+    if (m_thread.joinable())
+      m_thread.join();
 
-    xcb_disconnect(m_connection);
+    if (m_connection)
+      xcb_disconnect(m_connection);
   }
 
   bool try_lock() {
