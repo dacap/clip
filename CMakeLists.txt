@@ -3,7 +3,7 @@
 
 cmake_minimum_required(VERSION 3.1.2)
 
-project(clip)
+project(clip VERSION 1.0 LANGUAGES CXX)
 
 set(CMAKE_CXX_STANDARD 11)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -64,6 +64,10 @@ endif()
 
 add_library(clip ${CLIP_SOURCES})
 
+if(BUILD_SHARED_LIBS)
+   target_compile_definitions(clip PRIVATE "CLIP_DLL_EXPORTS" PUBLIC "CLIP_DLL")
+endif()
+
 if(APPLE)
   if(COCOA_LIBRARY)
     target_link_libraries(clip ${COCOA_LIBRARY})
@@ -85,3 +89,54 @@ if(CLIP_TESTS)
   enable_testing()
   add_subdirectory(tests)
 endif()
+
+include(CMakePackageConfigHelpers)
+include(GNUInstallDirs)
+
+set(INSTALL_CMAKECFG_DIR "lib/cmake/${PROJECT_NAME}")
+set(GENERATED_DIR "${CMAKE_CURRENT_BINARY_DIR}/generated")
+
+set(VERSION_CONFIG "${GENERATED_DIR}/${PROJECT_NAME}ConfigVersion.cmake")
+set(PROJECT_CONFIG "${GENERATED_DIR}/${PROJECT_NAME}Config.cmake")
+set(TARGETS_EXPORT_NAME "${PROJECT_NAME}Targets")
+set(NAMESPACE "${PROJECT_NAME}::")
+
+write_basic_package_version_file(
+  "${VERSION_CONFIG}" COMPATIBILITY SameMajorVersion)
+
+set(INSTALL_INC_DIR ${CMAKE_INSTALL_INCLUDEDIR})
+
+if(COMPAT_INC_DIR)
+  configure_package_config_file(
+      "Config.cmake.in"
+      "${PROJECT_CONFIG}"
+      INSTALL_DESTINATION "${INSTALL_CMAKECFG_DIR}"
+      PATH_VARS INSTALL_INC_DIR COMPAT_INC_DIR)
+else()
+  configure_package_config_file(
+      "Config.cmake.in"
+      "${PROJECT_CONFIG}"
+      INSTALL_DESTINATION "${INSTALL_CMAKECFG_DIR}"
+      PATH_VARS INSTALL_INC_DIR)
+endif()
+
+# Install the package config files
+install(
+  FILES "${PROJECT_CONFIG}" "${VERSION_CONFIG}"
+  DESTINATION "${INSTALL_CMAKECFG_DIR}")
+
+# Install the targets config files
+install(
+  EXPORT "${TARGETS_EXPORT_NAME}"
+  NAMESPACE "${NAMESPACE}"
+  DESTINATION "${INSTALL_CMAKECFG_DIR}")
+
+# Install the library 
+install(TARGETS clip
+    EXPORT ${TARGETS_EXPORT_NAME}
+    RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
+    ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
+    LIBRARY DESTINATION ${CMAKE_INSTALl_LIBDIR})
+
+# Install the header file
+install(FILES clip.h DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}/clip")

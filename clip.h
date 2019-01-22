@@ -12,6 +12,40 @@
 #include <memory>
 #include <string>
 
+// Generic helper definitions for shared library support
+#if defined _WIN32 || defined __CYGWIN__
+	#define CLIP_HELPER_DLL_IMPORT __declspec(dllimport)
+	#define CLIP_HELPER_DLL_EXPORT __declspec(dllexport)
+	#define CLIP_HELPER_DLL_LOCAL
+#else
+	#if __GNUC__ >= 4
+		#define CLIP_HELPER_DLL_IMPORT __attribute__ ((visibility ("default")))
+		#define CLIP_HELPER_DLL_EXPORT __attribute__ ((visibility ("default")))
+		#define CLIP_HELPER_DLL_LOCAL  __attribute__ ((visibility ("hidden")))
+	#else
+		#define CLIP_HELPER_DLL_IMPORT
+		#define CLIP_HELPER_DLL_EXPORT
+		#define CLIP_HELPER_DLL_LOCAL
+	#endif
+#endif
+
+// Now we use the generic helper definitions above to define CLIP_API and
+// CLIP_LOCAL.  CLIP_API is used for the public API symbols. It either DLL
+// imports or DLL exports (or does nothing for static build)
+// CLIP_LOCAL is used for non-api symbols.
+
+#ifdef CLIP_DLL // defined if the package is compiled as a DLL
+	#ifdef CLIP_DLL_EXPORTS // defined if we are building the the package as a DLL (instead of using it)
+		#define CLIP_API CLIP_HELPER_DLL_EXPORT
+	#else
+		#define CLIP_API CLIP_HELPER_DLL_IMPORT
+	#endif // CLIP_DLL_EXPORTS
+	#define CLIP_LOCAL CLIP_HELPER_DLL_LOCAL
+#else // CLIP_DLL is not defined: this means the package is a static lib.
+	#define CLIP_API
+	#define CLIP_LOCAL
+#endif // CLIP_DLL
+
 namespace clip {
 
   // ======================================================================
@@ -24,7 +58,7 @@ namespace clip {
   class image;
   struct image_spec;
 
-  class lock {
+  class CLIP_API lock {
   public:
     // You can give your current HWND as the "native_window_handle."
     // Windows clipboard functions use this handle to open/close
@@ -57,26 +91,36 @@ namespace clip {
     bool get_image_spec(image_spec& spec) const;
 
   private:
+
+    #ifdef _MSC_VER
+    #pragma warning(push)
+    #pragma warning(disable: 4251)
+    #endif
+
     class impl;
     std::unique_ptr<impl> p;
+
+    #ifdef _MSC_VER
+    #pragma warning(pop)
+    #endif
   };
 
-  format register_format(const std::string& name);
+  CLIP_API format register_format(const std::string& name);
 
   // This format is when the clipboard has no content.
-  format empty_format();
+  CLIP_API format empty_format();
 
   // When the clipboard has UTF8 text.
-  format text_format();
+  CLIP_API format text_format();
 
   // When the clipboard has an image.
-  format image_format();
+  CLIP_API format image_format();
 
   // Returns true if the clipboard has content of the given type.
-  bool has(format f);
+  CLIP_API bool has(format f);
 
   // Clears the clipboard content.
-  bool clear();
+  CLIP_API bool clear();
 
   // ======================================================================
   // Error handling
@@ -89,8 +133,8 @@ namespace clip {
 
   typedef void (*error_handler)(ErrorCode code);
 
-  void set_error_handler(error_handler f);
-  error_handler get_error_handler();
+  CLIP_API void set_error_handler(error_handler f);
+  CLIP_API error_handler get_error_handler();
 
   // ======================================================================
   // Text
@@ -98,8 +142,8 @@ namespace clip {
 
   // High-level API to put/get UTF8 text in/from the clipboard. These
   // functions returns false in case of error.
-  bool set_text(const std::string& value);
-  bool get_text(std::string& value);
+  CLIP_API bool set_text(const std::string& value);
+  CLIP_API bool get_text(std::string& value);
 
   // ======================================================================
   // Image
@@ -130,7 +174,7 @@ namespace clip {
   // automatically. macOS handles straight alpha directly, so there is
   // no conversion at all. Linux/X11 images are transferred in
   // image/png format which are specified in straight alpha.
-  class image {
+  class CLIP_API image {
   public:
     image();
     image(const image_spec& spec);
@@ -159,9 +203,9 @@ namespace clip {
 
   // High-level API to set/get an image in/from the clipboard. These
   // functions returns false in case of error.
-  bool set_image(const image& img);
-  bool get_image(image& img);
-  bool get_image_spec(image_spec& spec);
+  CLIP_API bool set_image(const image& img);
+  CLIP_API bool get_image(image& img);
+  CLIP_API bool get_image_spec(image_spec& spec);
 
   // ======================================================================
   // Platform-specific
@@ -170,8 +214,8 @@ namespace clip {
   // Only for X11: Sets the time (in milliseconds) that we must wait
   // for the selection/clipboard owner to receive the content. This
   // value is 1000 (one second) by default.
-  void set_x11_wait_timeout(int msecs);
-  int get_x11_wait_timeout();
+  CLIP_API void set_x11_wait_timeout(int msecs);
+  CLIP_API int get_x11_wait_timeout();
 
 } // namespace clip
 
