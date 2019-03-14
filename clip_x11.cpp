@@ -741,6 +741,7 @@ private:
         if (status == std::cv_status::no_timeout) {
           // If the condition variable was notified, it means that the
           // callback was called correctly.
+          lock.release();
           return m_callback_result;
         }
       } while (m_incr_received);
@@ -748,6 +749,7 @@ private:
 
     // Reset callback
     m_callback = notify_callback();
+    lock.release();
     return false;
   }
 
