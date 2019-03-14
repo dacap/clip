@@ -585,14 +585,15 @@ private:
                               event->property,
                               m_target_atom);
     if (reply) {
+      xcb_atom_t reply_type = reply->type;
       // In this case, We're going to receive the clipboard content in
       // chunks of data with several PropertyNotify events.
-      if (reply->type == get_atom(INCR)) {
+      if (reply_type == get_atom(INCR)) {
         free(reply);
 
         reply = get_and_delete_property(event->requestor,
                                         event->property,
-                                        reply->type);
+                                        reply_type);
         if (reply) {
           if (xcb_get_property_value_length(reply) == 4) {
             uint32_t n = *(uint32_t*)xcb_get_property_value(reply);
