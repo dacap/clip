@@ -1,5 +1,5 @@
 // Clip Library
-// Copyright (c) 2018 David Capello
+// Copyright (c) 2018-2019 David Capello
 //
 // This file is released under the terms of the MIT license.
 // Read LICENSE.txt for more information.
@@ -73,7 +73,8 @@ public:
   typedef std::function<bool()> notify_callback;
 
   Manager()
-    : m_connection(xcb_connect(nullptr, nullptr))
+    : m_lock(m_mutex, std::defer_lock)
+    , m_connection(xcb_connect(nullptr, nullptr))
     , m_window(0)
     , m_incr_process(false) {
     if (!m_connection)
@@ -154,11 +155,11 @@ public:
   }
 
   bool try_lock() {
-    bool res = m_mutex.try_lock();
+    bool res = m_lock.try_lock();
     if (!res) {
       // TODO make this configurable (the same for Windows retries)
       for (int i=0; i<5 && !res; ++i) {
-        res = m_mutex.try_lock();
+        res = m_lock.try_lock();
         std::this_thread::sleep_for(std::chrono::milliseconds(20));
       }
     }
@@ -166,7 +167,7 @@ public:
   }
 
   void unlock() {
-    m_mutex.unlock();
+    m_lock.unlock();
   }
 
   // Clear our data
@@ -714,8 +715,6 @@ private:
     if (m_window != get_x11_selection_owner())
       m_data.clear();
 
-    std::unique_lock<std::mutex> lock(m_mutex, std::adopt_lock);
-
     // Ask to the selection owner for its content on each known
     // text format/atom.
     for (xcb_atom_t atom : atoms) {
@@ -736,7 +735,7 @@ private:
 
         // Wait a response for 100 milliseconds
         std::cv_status status =
-          m_cv.wait_for(lock,
+          m_cv.wait_for(m_lock,
                         std::chrono::milliseconds(get_x11_wait_timeout()));
         if (status == std::cv_status::no_timeout) {
           // If the condition variable was notified, it means that the
@@ -937,11 +936,18 @@ private:
 #endif
   }
 
-  xcb_connection_t* m_connection;
-  xcb_window_t m_window;
-
   // Access to the whole Manager
-  mutable std::mutex m_mutex;
+  std::mutex m_mutex;
+
+  // Lock used in the main thread using the Manager (i.e. by lock::impl)
+  mutable std::unique_lock<std::mutex> m_lock;
+
+  // Connection to X11 server
+  xcb_connection_t* m_connection;
+
+  // Temporal background window used to own the clipboard and process
+  // all events related about the clipboard in a background thread
+  xcb_window_t m_window;
 
   // Used to wait/notify the arrival of the SelectionNotify event when
   // we requested the clipboard content from other selection owner.
