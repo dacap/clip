@@ -1,5 +1,5 @@
 # Clip Library
-*Copyright (C) 2015-2018 David Capello*
+*Copyright (C) 2015-2019 David Capello*
 
 [![Build Status](https://travis-ci.org/dacap/clip.svg)](https://travis-ci.org/dacap/clip)
 [![Build status](https://ci.appveyor.com/api/projects/status/iyory4t5oop7ssrs?svg=true)](https://ci.appveyor.com/project/dacap/clip)
@@ -58,6 +58,5 @@ int main() {
 
 ## Who is using this library?
 
-`clip` is being used in the following applications:
-
-* [Aseprite](https://github.com/aseprite/aseprite)
+[Check the wiki](https://github.com/dacap/clip/wiki#who-is-using-clip)
+to know what projects are using the `clip` library.
