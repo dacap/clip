@@ -50,6 +50,10 @@ int main() {
 
 ## Platform specific details
 
+* If two versions of your application (32-bit and 64-bit) can run at
+  at the same time, remember to avoid storing data types that could
+  change depending on the platform (e.g. `size_t`) in your custom
+  format data.
 * **Windows**:
   - [Limited number of clipboard formats on Windows](http://blogs.msdn.com/b/oldnewthing/archive/2015/03/19/10601208.aspx)
 * **Linux**:

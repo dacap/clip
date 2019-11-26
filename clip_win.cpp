@@ -1,5 +1,5 @@
 // Clip Library
-// Copyright (c) 2015-2018 David Capello
+// Copyright (c) 2015-2019 David Capello
 //
 // This file is released under the terms of the MIT license.
 // Read LICENSE.txt for more information.
@@ -22,6 +22,12 @@
 namespace clip {
 
 namespace {
+
+// Data type used as header for custom formats to indicate the exact
+// size of the user custom data. This is necessary because it looks
+// like GlobalSize() might not return the exact size, but a greater
+// value.
+typedef uint64_t CustomSizeT;
 
 unsigned long get_shift_from_mask(unsigned long mask) {
   unsigned long shift = 0;
@@ -123,12 +129,12 @@ bool lock::impl::set_data(format f, const char* buf, size_t len) {
     }
   }
   else {
-    Hglobal hglobal(len+sizeof(size_t));
+    Hglobal hglobal(len+sizeof(CustomSizeT));
     if (hglobal) {
-      size_t* dst = (size_t*)GlobalLock(hglobal);
+      auto dst = (uint8_t*)GlobalLock(hglobal);
       if (dst) {
-        *dst = len;
-        memcpy(dst+1, buf, len);
+        *((CustomSizeT*)dst) = len;
+        memcpy(dst+sizeof(CustomSizeT), buf, len);
         GlobalUnlock(hglobal);
         result = (SetClipboardData(f, hglobal) ? true: false);
         if (result)
@@ -185,12 +191,21 @@ bool lock::impl::get_data(format f, char* buf, size_t len) const {
     if (IsClipboardFormatAvailable(f)) {
       HGLOBAL hglobal = GetClipboardData(f);
       if (hglobal) {
-        const size_t* ptr = (const size_t*)GlobalLock(hglobal);
+        const SIZE_T total_size = GlobalSize(hglobal);
+        auto ptr = (const uint8_t*)GlobalLock(hglobal);
         if (ptr) {
-          size_t reqsize = *ptr;
-          assert(reqsize <= len);
+          CustomSizeT reqsize = *((CustomSizeT*)ptr);
+
+          // If the registered length of data in the first CustomSizeT
+          // number of bytes of the hglobal data is greater than the
+          // GlobalSize(hglobal), something is wrong, it should not
+          // happen.
+          assert(reqsize <= total_size);
+          if (reqsize > total_size)
+            reqsize = total_size - sizeof(CustomSizeT);
+
           if (reqsize <= len) {
-            memcpy(buf, ptr+1, reqsize);
+            memcpy(buf, ptr+sizeof(CustomSizeT), reqsize);
             result = true;
           }
           GlobalUnlock(hglobal);
@@ -229,14 +244,19 @@ size_t lock::impl::get_data_length(format f) const {
       }
     }
   }
-  // TODO check if it's a registered custom format
   else if (f != empty_format()) {
     if (IsClipboardFormatAvailable(f)) {
       HGLOBAL hglobal = GetClipboardData(f);
       if (hglobal) {
-        const size_t* ptr = (const size_t*)GlobalLock(hglobal);
+        const SIZE_T total_size = GlobalSize(hglobal);
+        auto ptr = (const uint8_t*)GlobalLock(hglobal);
         if (ptr) {
-          len = *ptr;
+          len = *((CustomSizeT*)ptr);
+
+          assert(len <= total_size);
+          if (len > total_size)
+            len = total_size - sizeof(CustomSizeT);
+
           GlobalUnlock(hglobal);
         }
       }
