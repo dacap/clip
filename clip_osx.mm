@@ -5,6 +5,7 @@
 // Read LICENSE.txt for more information.
 
 #include "clip.h"
+#include "clip_common.h"
 #include "clip_lock_impl.h"
 
 #include <cassert>
@@ -78,7 +79,7 @@ namespace {
         bits_shift += bits_per_sample;
       }
 
-      // Without alpha
+      // With alpha
       if (bitmap.alpha) {
         if (bitmap.bitmapFormat & NS16BitBigEndianBitmapFormat ||
             bitmap.bitmapFormat & NS32BitBigEndianBitmapFormat) {
@@ -113,6 +114,13 @@ namespace {
 
       std::copy(bitmap.bitmapData,
                 bitmap.bitmapData+size, img.data());
+
+      // Convert premultiplied data to unpremultiplied if needed.
+      if (bitmap.alpha &&
+          bitmap.samplesPerPixel >= 3 &&
+          !(bitmap.bitmapFormat & NSAlphaNonpremultipliedBitmapFormat)) {
+        details::divide_rgb_by_alpha(img);
+      }
 
       std::swap(*output_img, img);
     }
