@@ -1,5 +1,5 @@
 # Clip Library
-*Copyright (C) 2015-2019 David Capello*
+*Copyright (C) 2015-2020 David Capello*
 
 [![Build Status](https://travis-ci.org/dacap/clip.svg)](https://travis-ci.org/dacap/clip)
 [![Build status](https://ci.appveyor.com/api/projects/status/iyory4t5oop7ssrs?svg=true)](https://ci.appveyor.com/project/dacap/clip)
