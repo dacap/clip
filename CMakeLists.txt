@@ -1,5 +1,5 @@
 # Clip Library
-# Copyright (C) 2015-2018 David Capello
+# Copyright (c) 2015-2020 David Capello
 
 cmake_minimum_required(VERSION 3.1.2)
 
@@ -64,7 +64,9 @@ endif()
 
 add_library(clip ${CLIP_SOURCES})
 
-if(APPLE)
+if(WIN32)
+  target_link_libraries(clip shlwapi)
+elseif(APPLE)
   if(COCOA_LIBRARY)
     target_link_libraries(clip ${COCOA_LIBRARY})
   endif()

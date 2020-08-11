@@ -16,6 +16,8 @@
 
 #include <windows.h>
 
+#include "clip_win_wic.h"
+
 #ifndef LCS_WINDOWS_COLOR_SPACE
 #define LCS_WINDOWS_COLOR_SPACE 'Win '
 #endif
@@ -397,6 +399,20 @@ size_t lock::impl::get_data_length(format f) const {
 
 bool lock::impl::set_image(const image& image) {
   const image_spec& spec = image.spec();
+
+  // Add the PNG clipboard format for images with alpha channel
+  // (useful to communicate with some Windows programs that only use
+  // alpha data from PNG clipboard format)
+  if (spec.bits_per_pixel == 32 &&
+      spec.alpha_mask) {
+    UINT png_format = RegisterClipboardFormatA("PNG");
+    if (png_format) {
+      Hglobal png_handle(win::write_png(image));
+      if (png_handle)
+        SetClipboardData(png_format, png_handle);
+    }
+  }
+
   image_spec out_spec = spec;
 
   int palette_colors = 0;
@@ -488,6 +504,22 @@ bool lock::impl::set_image(const image& image) {
 }
 
 bool lock::impl::get_image(image& output_img) const {
+  // Get the "PNG" clipboard format (this is useful only for 32bpp
+  // images with alpha channel, in other case we can use the regular
+  // DIB format)
+  UINT png_format = RegisterClipboardFormatA("PNG");
+  if (png_format && IsClipboardFormatAvailable(png_format)) {
+    HANDLE png_handle = GetClipboardData(png_format);
+    if (png_handle) {
+      size_t png_size = GlobalSize(png_handle);
+      uint8_t* png_data = (uint8_t*)GlobalLock(png_handle);
+      bool result = win::read_png(png_data, png_size, &output_img, nullptr);
+      GlobalUnlock(png_handle);
+      if (result)
+        return true;
+    }
+  }
+
   BitmapInfo bi;
   if (!bi.is_valid()) {
     error_handler e = get_error_handler();
@@ -572,6 +604,19 @@ bool lock::impl::get_image(image& output_img) const {
 }
 
 bool lock::impl::get_image_spec(image_spec& spec) const {
+  UINT png_format = RegisterClipboardFormatA("PNG");
+  if (png_format && IsClipboardFormatAvailable(png_format)) {
+    HANDLE png_handle = GetClipboardData(png_format);
+    if (png_handle) {
+      size_t png_size = GlobalSize(png_handle);
+      uint8_t* png_data = (uint8_t*)GlobalLock(png_handle);
+      bool result = win::read_png(png_data, png_size, nullptr, &spec);
+      GlobalUnlock(png_handle);
+      if (result)
+        return true;
+    }
+  }
+
   BitmapInfo bi;
   if (!bi.is_valid())
     return false;

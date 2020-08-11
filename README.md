@@ -1,5 +1,5 @@
 # Clip Library
-*Copyright (C) 2015-2020 David Capello*
+*Copyright (c) 2015-2020 David Capello*
 
 [![build](https://github.com/dacap/clip/workflows/build/badge.svg)](https://github.com/dacap/clip/actions?query=workflow%3Abuild)
 [![MIT Licensed](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE.txt)
