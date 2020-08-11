@@ -11,10 +11,10 @@
 namespace clip {
 namespace details {
 
-inline void divide_rgb_by_alpha(image& img)
-{
+inline void divide_rgb_by_alpha(image& img,
+                                bool hasAlphaGreaterThanZero = false) {
   const image_spec& spec = img.spec();
-  bool hasAlphaGreaterThanZero = false;
+
   bool hasValidPremultipliedAlpha = true;
 
   for (unsigned long y=0; y<spec.height; ++y) {
@@ -42,25 +42,23 @@ inline void divide_rgb_by_alpha(image& img)
       int b = ((c & spec.blue_mask ) >> spec.blue_shift );
       int a = ((c & spec.alpha_mask) >> spec.alpha_shift);
 
-      if (hasAlphaGreaterThanZero &&
-          hasValidPremultipliedAlpha) {
+      // If all alpha values = 0, we make the image opaque.
+      if (!hasAlphaGreaterThanZero) {
+        a = 255;
+
+        // We cannot change the image spec (e.g. spec.alpha_mask=0) to
+        // make the image opaque, because the "spec" of the image is
+        // read-only. The image spec used by the client is the one
+        // returned by get_image_spec().
+      }
+      // If there is alpha information and it's pre-multiplied alpha
+      else if (hasValidPremultipliedAlpha) {
         if (a > 0) {
-          // Make straight alpha
+          // Convert it to straight alpha
           r = r * 255 / a;
           g = g * 255 / a;
           b = b * 255 / a;
         }
-      }
-      else {
-        // If all alpha values = 0 or just one alpha value is
-        // not a valid alpha for premultiplied RGB values, we
-        // make the image opaque.
-        a = 255;
-
-        // We cannot change the image spec (e.g. spec.alpha_mask=0) to
-        // make the image opaque, because the "spec" of the iamge is
-        // read-only. The image spec used by the client is the one
-        // returned by get_image_spec().
       }
 
       *dst =

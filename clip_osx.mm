@@ -1,5 +1,5 @@
 // Clip Library
-// Copyright (c) 2015-2016 David Capello
+// Copyright (c) 2015-2020 David Capello
 //
 // This file is released under the terms of the MIT license.
 // Read LICENSE.txt for more information.
@@ -119,7 +119,9 @@ namespace {
       if (bitmap.alpha &&
           bitmap.samplesPerPixel >= 3 &&
           !(bitmap.bitmapFormat & NSAlphaNonpremultipliedBitmapFormat)) {
-        details::divide_rgb_by_alpha(img);
+        details::divide_rgb_by_alpha(
+          img,
+          true); // hasAlphaGreaterThanZero=true because we have valid alpha information
       }
 
       std::swap(*output_img, img);

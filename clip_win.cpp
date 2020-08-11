@@ -8,8 +8,12 @@
 #include "clip_common.h"
 #include "clip_lock_impl.h"
 
-#include <cassert>
+#include <algorithm>
+#include <cstdlib>
+#include <cstring>
+#include <string>
 #include <vector>
+
 #include <windows.h>
 
 #ifndef LCS_WINDOWS_COLOR_SPACE
@@ -64,6 +68,130 @@ public:
 
 private:
   HGLOBAL m_handle;
+};
+
+struct BitmapInfo {
+  BITMAPV5HEADER* b5 = nullptr;
+  BITMAPINFO* bi = nullptr;
+  int width = 0;
+  int height = 0;
+  uint16_t bit_count = 0;
+  uint32_t compression = 0;
+  uint32_t red_mask = 0;
+  uint32_t green_mask = 0;
+  uint32_t blue_mask = 0;
+  uint32_t alpha_mask = 0;
+
+  BitmapInfo() {
+    // Use DIBV5 only for 32 bpp uncompressed bitmaps and when all
+    // masks are valid.
+    if (IsClipboardFormatAvailable(CF_DIBV5)) {
+      b5 = (BITMAPV5HEADER*)GetClipboardData(CF_DIBV5);
+      if (b5 &&
+          b5->bV5BitCount == 32 &&
+          (b5->bV5Compression == BI_RGB ||
+           b5->bV5Compression == BI_BITFIELDS) &&
+          b5->bV5RedMask && b5->bV5GreenMask &&
+          b5->bV5BlueMask && b5->bV5AlphaMask) {
+        width       = b5->bV5Width;
+        height      = b5->bV5Height;
+        bit_count   = b5->bV5BitCount;
+        compression = b5->bV5Compression;
+        red_mask    = b5->bV5RedMask;
+        green_mask  = b5->bV5GreenMask;
+        blue_mask   = b5->bV5BlueMask;
+        alpha_mask  = b5->bV5AlphaMask;
+        return;
+      }
+    }
+
+    if (IsClipboardFormatAvailable(CF_DIB))
+      bi = (BITMAPINFO*)GetClipboardData(CF_DIB);
+    if (!bi)
+      return;
+
+    width       = bi->bmiHeader.biWidth;
+    height      = bi->bmiHeader.biHeight;
+    bit_count   = bi->bmiHeader.biBitCount;
+    compression = bi->bmiHeader.biCompression;
+
+    if (compression == BI_BITFIELDS) {
+      red_mask   = *((uint32_t*)&bi->bmiColors[0]);
+      green_mask = *((uint32_t*)&bi->bmiColors[1]);
+      blue_mask  = *((uint32_t*)&bi->bmiColors[2]);
+      if (bit_count == 32)
+        alpha_mask = 0xff000000;
+    }
+    else if (compression == BI_RGB) {
+      switch (bit_count) {
+        case 32:
+          red_mask   = 0xff0000;
+          green_mask = 0xff00;
+          blue_mask  = 0xff;
+          alpha_mask = 0xff000000;
+          break;
+        case 24:
+          red_mask   = 0xff0000;
+          green_mask = 0xff00;
+          blue_mask  = 0xff;
+          break;
+        case 16:
+          red_mask   = 0x7c00;
+          green_mask = 0x03e0;
+          blue_mask  = 0x001f;
+          break;
+      }
+    }
+  }
+
+  bool is_valid() const {
+    return (b5 || bi);
+  }
+
+  void fill_spec(image_spec& spec) {
+    spec.width = width;
+    spec.height = (height >= 0 ? height: -height);
+    // We convert indexed to 24bpp RGB images to match the OS X behavior
+    spec.bits_per_pixel = bit_count;
+    if (spec.bits_per_pixel <= 8)
+      spec.bits_per_pixel = 24;
+    spec.bytes_per_row = width*((spec.bits_per_pixel+7)/8);
+    spec.red_mask   = red_mask;
+    spec.green_mask = green_mask;
+    spec.blue_mask  = blue_mask;
+    spec.alpha_mask = alpha_mask;
+
+    switch (spec.bits_per_pixel) {
+
+      case 24: {
+        // We need one extra byte to avoid a crash updating the last
+        // pixel on last row using:
+        //
+        //   *((uint32_t*)ptr) = pixel24bpp;
+        //
+        ++spec.bytes_per_row;
+
+        // Align each row to 32bpp
+        int padding = (4-(spec.bytes_per_row&3))&3;
+        spec.bytes_per_row += padding;
+        break;
+      }
+
+      case 16: {
+        int padding = (4-(spec.bytes_per_row&3))&3;
+        spec.bytes_per_row += padding;
+        break;
+      }
+    }
+
+    unsigned long* masks = &spec.red_mask;
+    unsigned long* shifts = &spec.red_shift;
+    for (unsigned long* shift=shifts, *mask=masks; shift<shifts+4; ++shift, ++mask) {
+      if (*mask)
+        *shift = get_shift_from_mask(*mask);
+    }
+  }
+
 };
 
 }
@@ -318,10 +446,8 @@ bool lock::impl::set_image(const image& image) {
   switch (spec.bits_per_pixel) {
     case 32: {
       const char* src = image.data();
-      char* dst = (((char*)bi)+bi->bV5Size)
-        + (out_spec.height-1)*out_spec.bytes_per_row;
+      char* dst = (((char*)bi)+bi->bV5Size) + (out_spec.height-1)*out_spec.bytes_per_row;
       for (long y=spec.height-1; y>=0; --y) {
-        // std::copy(src, src+spec.bytes_per_row, dst);
         const uint32_t* src_x = (const uint32_t*)src;
         uint32_t* dst_x = (uint32_t*)dst;
 
@@ -362,42 +488,39 @@ bool lock::impl::set_image(const image& image) {
 }
 
 bool lock::impl::get_image(image& output_img) const {
-  image_spec spec;
-  if (!get_image_spec(spec))
-    return false;
-
-  BITMAPINFO* bi = (BITMAPINFO*)GetClipboardData(CF_DIB);
-  if (!bi)
-    return false;
-
-  if (bi->bmiHeader.biCompression != BI_RGB &&
-      bi->bmiHeader.biCompression != BI_BITFIELDS) {
+  BitmapInfo bi;
+  if (!bi.is_valid()) {
     error_handler e = get_error_handler();
     if (e)
       e(ErrorCode::ImageNotSupported);
     return false;
   }
 
+  image_spec spec;
+  bi.fill_spec(spec);
   image img(spec);
 
-  switch (bi->bmiHeader.biBitCount) {
+  switch (bi.bit_count) {
 
     case 32:
     case 24:
     case 16: {
-      const int src_bytes_per_row = spec.width*((bi->bmiHeader.biBitCount+7)/8);
-      const int padding = (4-(src_bytes_per_row&3))&3;
-      const char* src = (((char*)bi)+bi->bmiHeader.biSize);
+      const uint8_t* src = nullptr;
 
-      if (bi->bmiHeader.biCompression == BI_BITFIELDS) {
-        src += sizeof(RGBQUAD)*3;
-
-        for (long y=spec.height-1; y>=0; --y, src+=src_bytes_per_row+padding) {
-          char* dst = img.data()+y*spec.bytes_per_row;
-          std::copy(src, src+src_bytes_per_row, dst);
-        }
+      if (bi.compression == BI_RGB ||
+          bi.compression == BI_BITFIELDS) {
+        if (bi.b5)
+          src = ((uint8_t*)bi.b5) + bi.b5->bV5Size;
+        else
+          src = ((uint8_t*)bi.bi) + bi.bi->bmiHeader.biSize;
+        if (bi.compression == BI_BITFIELDS)
+          src += sizeof(RGBQUAD)*3;
       }
-      else if (bi->bmiHeader.biCompression == BI_RGB) {
+
+      if (src) {
+        const int src_bytes_per_row = spec.width*((bi.bit_count+7)/8);
+        const int padding = (4-(src_bytes_per_row&3))&3;
+
         for (long y=spec.height-1; y>=0; --y, src+=src_bytes_per_row+padding) {
           char* dst = img.data()+y*spec.bytes_per_row;
           std::copy(src, src+src_bytes_per_row, dst);
@@ -406,24 +529,25 @@ bool lock::impl::get_image(image& output_img) const {
 
       // Windows uses premultiplied RGB values, and we use straight
       // alpha. So we have to divide all RGB values by its alpha.
-      if (bi->bmiHeader.biBitCount == 32 &&
-          spec.alpha_mask) {
+      if (bi.bit_count == 32 && spec.alpha_mask) {
         details::divide_rgb_by_alpha(img);
       }
       break;
     }
 
     case 8: {
-      const int colors = (bi->bmiHeader.biClrUsed > 0 ? bi->bmiHeader.biClrUsed: 256);
+      assert(bi.bi);
+
+      const int colors = (bi.bi->bmiHeader.biClrUsed > 0 ? bi.bi->bmiHeader.biClrUsed: 256);
       std::vector<uint32_t> palette(colors);
       for (int c=0; c<colors; ++c) {
         palette[c] =
-          (bi->bmiColors[c].rgbRed   << spec.red_shift) |
-          (bi->bmiColors[c].rgbGreen << spec.green_shift) |
-          (bi->bmiColors[c].rgbBlue  << spec.blue_shift);
+          (bi.bi->bmiColors[c].rgbRed   << spec.red_shift) |
+          (bi.bi->bmiColors[c].rgbGreen << spec.green_shift) |
+          (bi.bi->bmiColors[c].rgbBlue  << spec.blue_shift);
       }
 
-      const uint8_t* src = (((uint8_t*)bi)+bi->bmiHeader.biSize+sizeof(RGBQUAD)*colors);
+      const uint8_t* src = (((uint8_t*)bi.bi) + bi.bi->bmiHeader.biSize + sizeof(RGBQUAD)*colors);
       const int padding = (4-(spec.width&3))&3;
 
       for (long y=spec.height-1; y>=0; --y, src+=padding) {
@@ -448,91 +572,10 @@ bool lock::impl::get_image(image& output_img) const {
 }
 
 bool lock::impl::get_image_spec(image_spec& spec) const {
-  if (!IsClipboardFormatAvailable(CF_DIB))
+  BitmapInfo bi;
+  if (!bi.is_valid())
     return false;
-
-  BITMAPINFO* bi = (BITMAPINFO*)GetClipboardData(CF_DIB);
-  if (!bi)
-    return false;
-
-  int w = bi->bmiHeader.biWidth;
-  int h = bi->bmiHeader.biHeight;
-
-  spec.width = w;
-  spec.height = (h >= 0 ? h: -h);
-  // We convert indexed to 24bpp RGB images to match the OS X behavior
-  spec.bits_per_pixel = bi->bmiHeader.biBitCount;
-  if (spec.bits_per_pixel <= 8)
-    spec.bits_per_pixel = 24;
-  spec.bytes_per_row = w*((spec.bits_per_pixel+7)/8);
-
-  switch (spec.bits_per_pixel) {
-
-    case 32:
-      if (bi->bmiHeader.biCompression == BI_BITFIELDS) {
-        spec.red_mask   = *((uint32_t*)&bi->bmiColors[0]);
-        spec.green_mask = *((uint32_t*)&bi->bmiColors[1]);
-        spec.blue_mask  = *((uint32_t*)&bi->bmiColors[2]);
-        spec.alpha_mask = 0xff000000;
-      }
-      else if (bi->bmiHeader.biCompression == BI_RGB) {
-        spec.red_mask   = 0xff0000;
-        spec.green_mask = 0xff00;
-        spec.blue_mask  = 0xff;
-        spec.alpha_mask = 0xff000000;
-      }
-      break;
-
-    case 24: {
-      // We need one extra byte to avoid a crash updating the last
-      // pixel on last row using:
-      //
-      //   *((uint32_t*)ptr) = pixel24bpp;
-      //
-      ++spec.bytes_per_row;
-
-      // Align each row to 32bpp
-      int padding = (4-(spec.bytes_per_row&3))&3;
-      spec.bytes_per_row += padding;
-
-      if (bi->bmiHeader.biCompression == BI_BITFIELDS) {
-        spec.red_mask   = *((uint32_t*)&bi->bmiColors[0]);
-        spec.green_mask = *((uint32_t*)&bi->bmiColors[1]);
-        spec.blue_mask  = *((uint32_t*)&bi->bmiColors[2]);
-      }
-      else if (bi->bmiHeader.biCompression == BI_RGB) {
-        spec.red_mask   = 0xff0000;
-        spec.green_mask = 0xff00;
-        spec.blue_mask  = 0xff;
-      }
-      break;
-    }
-
-    case 16: {
-      int padding = (4-(spec.bytes_per_row&3))&3;
-      spec.bytes_per_row += padding;
-
-      if (bi->bmiHeader.biCompression == BI_BITFIELDS) {
-        spec.red_mask   = *((DWORD*)&bi->bmiColors[0]);
-        spec.green_mask = *((DWORD*)&bi->bmiColors[1]);
-        spec.blue_mask  = *((DWORD*)&bi->bmiColors[2]);
-      }
-      else if (bi->bmiHeader.biCompression == BI_RGB) {
-        spec.red_mask   = 0x7c00;
-        spec.green_mask = 0x03e0;
-        spec.blue_mask  = 0x001f;
-      }
-      break;
-    }
-  }
-
-  unsigned long* masks = &spec.red_mask;
-  unsigned long* shifts = &spec.red_shift;
-  for (unsigned long* shift=shifts, *mask=masks; shift<shifts+4; ++shift, ++mask) {
-    if (*mask)
-      *shift = get_shift_from_mask(*mask);
-  }
-
+  bi.fill_spec(spec);
   return true;
 }
 
