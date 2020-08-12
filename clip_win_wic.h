@@ -15,6 +15,20 @@
 namespace clip {
 namespace win {
 
+// Successful calls to CoInitialize() (S_OK or S_FALSE) must match
+// the calls to CoUninitialize().
+// From: https://docs.microsoft.com/en-us/windows/win32/api/combaseapi/nf-combaseapi-couninitialize#remarks
+struct coinit {
+  HRESULT hr;
+  coinit() {
+    hr = CoInitialize(nullptr);
+  }
+  ~coinit() {
+    if (hr == S_OK || hr == S_FALSE)
+      CoUninitialize();
+  }
+};
+
 template<class T>
 class comptr {
 public:
@@ -126,7 +140,7 @@ bool write_png_on_stream(const image& image,
 }
 
 HGLOBAL write_png(const image& image) {
-  CoInitialize(nullptr);
+  coinit com;
 
   comptr<IStream> stream;
   HRESULT hr = CreateStreamOnHGlobal(nullptr, false, &stream);
@@ -151,7 +165,7 @@ bool read_png(const uint8_t* buf,
               const UINT len,
               image* output_image,
               image_spec* output_spec) {
-  CoInitialize(nullptr);
+  coinit com;
 
   comptr<IStream> stream(SHCreateMemStream(buf, len));
   if (!stream)
