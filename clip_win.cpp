@@ -99,10 +99,18 @@ struct BitmapInfo {
         height      = b5->bV5Height;
         bit_count   = b5->bV5BitCount;
         compression = b5->bV5Compression;
-        red_mask    = b5->bV5RedMask;
-        green_mask  = b5->bV5GreenMask;
-        blue_mask   = b5->bV5BlueMask;
-        alpha_mask  = b5->bV5AlphaMask;
+        if (compression == BI_BITFIELDS) {
+          red_mask    = b5->bV5RedMask;
+          green_mask  = b5->bV5GreenMask;
+          blue_mask   = b5->bV5BlueMask;
+          alpha_mask  = b5->bV5AlphaMask;
+        }
+        else {
+          red_mask    = 0xff0000;
+          green_mask  = 0xff00;
+          blue_mask   = 0xff;
+          alpha_mask  = 0xff000000;
+        }
         return;
       }
     }
