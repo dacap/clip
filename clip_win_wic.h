@@ -65,7 +65,7 @@ bool write_png_on_stream(const image& image,
                                 nullptr, CLSCTX_INPROC_SERVER,
                                 IID_PPV_ARGS(&encoder));
   if (FAILED(hr))
-    return nullptr;
+    return false;
 
   hr = encoder->Initialize(stream, WICBitmapEncoderNoCache);
   if (FAILED(hr))
