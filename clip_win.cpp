@@ -530,9 +530,8 @@ bool lock::impl::get_image(image& output_img) const {
 
   BitmapInfo bi;
   if (!bi.is_valid()) {
-    error_handler e = get_error_handler();
-    if (e)
-      e(ErrorCode::ImageNotSupported);
+    // There is no image at all in the clipboard, no need to report
+    // this as an error, just return false.
     return false;
   }
 
