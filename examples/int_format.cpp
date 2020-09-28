@@ -7,7 +7,7 @@
 #include <iostream>
 
 int main() {
-  clip::format int_format = clip::register_format("com.davidcapello.clip.CustomInt");
+  clip::format int_format = clip::register_format("com.github.clip.CustomInt");
 
   {
     clip::lock l;
