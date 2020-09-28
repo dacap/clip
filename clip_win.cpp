@@ -91,10 +91,10 @@ struct BitmapInfo {
       b5 = (BITMAPV5HEADER*)GetClipboardData(CF_DIBV5);
       if (b5 &&
           b5->bV5BitCount == 32 &&
-          (b5->bV5Compression == BI_RGB ||
-           b5->bV5Compression == BI_BITFIELDS) &&
-          b5->bV5RedMask && b5->bV5GreenMask &&
-          b5->bV5BlueMask && b5->bV5AlphaMask) {
+          ((b5->bV5Compression == BI_RGB) ||
+           (b5->bV5Compression == BI_BITFIELDS &&
+            b5->bV5RedMask && b5->bV5GreenMask &&
+            b5->bV5BlueMask && b5->bV5AlphaMask))) {
         width       = b5->bV5Width;
         height      = b5->bV5Height;
         bit_count   = b5->bV5BitCount;
