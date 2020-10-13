@@ -66,6 +66,15 @@ add_library(clip ${CLIP_SOURCES})
 
 if(WIN32)
   target_link_libraries(clip shlwapi)
+
+  # MinGW requires the windowscodecs just because CLSIDs are defined
+  # in the windowscodecs.a file instead of the wincodec.h file (?!)
+  if(MINGW)
+    find_library(CLIP_WINDOWSCODECS_LIBRARY windowscodecs)
+    if(CLIP_WINDOWSCODECS_LIBRARY)
+      target_link_libraries(clip ${CLIP_WINDOWSCODECS_LIBRARY})
+    endif()
+  endif()
 elseif(APPLE)
   if(COCOA_LIBRARY)
     target_link_libraries(clip ${COCOA_LIBRARY})
