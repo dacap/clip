@@ -5,4 +5,4 @@ project("clip")
     kind("StaticLib")
     targetdir("bin/%{cfg.platform}/%{cfg.buildcfg}")
 
-    files({"clip.cpp", "image.cpp", "project.lua", ".gitignore"})
+    files({"clip.h", "clip.cpp", "image.cpp", "clip_x11.cpp", "project.lua", ".gitignore"})
