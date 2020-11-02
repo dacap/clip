@@ -1,2 +1,6 @@
+bin/
+obj/
+
 clip.cbp
+clip.depend
 clip.layout
