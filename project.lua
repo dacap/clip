@@ -7,4 +7,7 @@ project("clip")
 
     buildoptions({"-w"})
 
-    files({"clip.h", "clip.cpp", "image.cpp", "clip_x11.cpp", "project.lua", ".gitignore"})
+    files({"clip.h", "clip.cpp", "image.cpp", "project.lua", ".gitignore"})
+
+    filter("platforms:Linux*")
+        files({"clip_x11.cpp"})
