@@ -10,4 +10,4 @@ project("clip")
     files({"clip.h", "clip.cpp", "image.cpp", "project.lua", ".gitignore"})
 
     filter("platforms:Linux*")
-        files({"clip_x11.cpp"})
+        files({"clip_x11.cpp", "clip_x11_png.h"})
