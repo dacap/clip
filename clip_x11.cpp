@@ -179,6 +179,14 @@ public:
   void clear() {
     clear_data();
 
+    // As we want to clear the clipboard content, we set us as the new
+    // clipboard owner (with an empty clipboard). If this fails, we'll
+    // try to send a XCB_SELECTION_CLEAR request to the real owner
+    // (but that can fail anyway because it's a request that the owner
+    // could ignore).
+    if (set_x11_selection_owner())
+      return;
+
     // Clear the clipboard data from the selection owner
     const xcb_window_t owner = get_x11_selection_owner();
     if (m_window != owner) {
