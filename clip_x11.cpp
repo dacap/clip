@@ -116,20 +116,9 @@ public:
     if (!m_data.empty() &&
         m_window &&
         m_window == get_x11_selection_owner()) {
-      // Check if there is a CLIPBOARD_MANAGER running to save all
-      // targets before we exit.
-      xcb_window_t x11_clipboard_manager = 0;
-      xcb_get_selection_owner_cookie_t cookie =
-        xcb_get_selection_owner(m_connection,
-                                get_atom(CLIPBOARD_MANAGER));
-
-      xcb_get_selection_owner_reply_t* reply =
-        xcb_get_selection_owner_reply(m_connection, cookie, nullptr);
-      if (reply) {
-        x11_clipboard_manager = reply->owner;
-        free(reply);
-      }
-
+      // If the CLIPBOARD_MANAGER atom is not 0, we assume that there
+      // is a clipboard manager available were we can leave our data.
+      xcb_atom_t x11_clipboard_manager = get_atom(CLIPBOARD_MANAGER);
       if (x11_clipboard_manager) {
         // Start the SAVE_TARGETS mechanism so the X11
         // CLIPBOARD_MANAGER will save our clipboard data
@@ -137,7 +126,7 @@ public:
         get_data_from_selection_owner(
           { get_atom(SAVE_TARGETS) },
           [this]() -> bool { return true; },
-          get_atom(CLIPBOARD_MANAGER));
+          x11_clipboard_manager);
       }
     }
 #endif
