@@ -203,7 +203,7 @@ bool read_png(const uint8_t* buf,
     for (y=0; y<height; ++y) {
       const uint8_t* src = rows[y];
       uint32_t* dst = (uint32_t*)(img.data() + y*spec.bytes_per_row);
-      unsigned int x, r, g, b, a = 255;
+      unsigned int x, r, g, b, a = 0;
 
       for (x=0; x<width; x++) {
         r = *(src++);
