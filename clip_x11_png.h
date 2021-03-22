@@ -160,9 +160,7 @@ bool read_png(const uint8_t* buf,
   spec.green_shift = 8;
   spec.blue_shift  = 16;
 
-  // TODO indexed images with alpha
-  if (color_type == PNG_COLOR_TYPE_RGB_ALPHA ||
-      color_type == PNG_COLOR_TYPE_GRAY_ALPHA) {
+  if ((color_type & PNG_COLOR_MASK_ALPHA) == PNG_COLOR_MASK_ALPHA) {
     spec.alpha_mask = 0xff000000;
     spec.alpha_shift = 24;
   }
