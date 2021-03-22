@@ -1,5 +1,5 @@
 // Clip Library
-// Copyright (c) 2018 David Capello
+// Copyright (c) 2018-2021 David Capello
 //
 // This file is released under the terms of the MIT license.
 // Read LICENSE.txt for more information.
@@ -146,7 +146,12 @@ bool read_png(const uint8_t* buf,
   spec.width = width;
   spec.height = height;
   spec.bits_per_pixel = 32;
-  spec.bytes_per_row = png_get_rowbytes(png, info);
+
+  // Don't use png_get_rowbytes(png, info) here because this is the
+  // bytes_per_row of the output clip::image (the png file could
+  // contain 24bpp but we want to return a 32bpp anyway with alpha=255
+  // in that case).
+  spec.bytes_per_row = 4*width;
 
   spec.red_mask    = 0x000000ff;
   spec.green_mask  = 0x0000ff00;
@@ -185,10 +190,11 @@ bool read_png(const uint8_t* buf,
     int number_passes = png_set_interlace_handling(png);
     png_read_update_info(png, info);
 
+    const int src_bytes_per_row = png_get_rowbytes(png, info);
     png_bytepp rows = (png_bytepp)png_malloc(png, sizeof(png_bytep)*height);
     png_uint_32 y;
     for (y=0; y<height; ++y)
-      rows[y] = (png_bytep)png_malloc(png, spec.bytes_per_row);
+      rows[y] = (png_bytep)png_malloc(png, src_bytes_per_row);
 
     for (int pass=0; pass<number_passes; ++pass)
       for (y=0; y<height; ++y)
