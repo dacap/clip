@@ -1,5 +1,5 @@
 // Clip Library
-// Copyright (c) 2018-2019 David Capello
+// Copyright (c) 2018-2021 David Capello
 //
 // This file is released under the terms of the MIT license.
 // Read LICENSE.txt for more information.
@@ -9,6 +9,7 @@
 
 #include <xcb/xcb.h>
 
+#include <atomic>
 #include <algorithm>
 #include <cassert>
 #include <condition_variable>
@@ -967,7 +968,7 @@ private:
   // fails, the callback can return false and finally the get_image()
   // will return false (i.e. there is data, but it's not a valid image
   // format).
-  bool m_callback_result;
+  std::atomic<bool> m_callback_result;
 
   // Cache of known atoms
   mutable std::map<std::string, xcb_atom_t> m_atoms;
