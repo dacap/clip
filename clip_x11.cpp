@@ -121,13 +121,17 @@ public:
       // is a clipboard manager available were we can leave our data.
       xcb_atom_t x11_clipboard_manager = get_atom(CLIPBOARD_MANAGER);
       if (x11_clipboard_manager) {
-        // Start the SAVE_TARGETS mechanism so the X11
-        // CLIPBOARD_MANAGER will save our clipboard data
-        // from now on.
-        get_data_from_selection_owner(
-          { get_atom(SAVE_TARGETS) },
-          [this]() -> bool { return true; },
-          x11_clipboard_manager);
+        // We have to lock the m_lock mutex that will be used to wait
+        // the m_cv condition in get_data_from_selection_owner().
+        if (try_lock()) {
+          // Start the SAVE_TARGETS mechanism so the X11
+          // CLIPBOARD_MANAGER will save our clipboard data
+          // from now on.
+          get_data_from_selection_owner(
+            { get_atom(SAVE_TARGETS) },
+            [this]() -> bool { return true; },
+            x11_clipboard_manager);
+        }
       }
     }
 #endif
