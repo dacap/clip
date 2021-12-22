@@ -129,7 +129,7 @@ public:
           // from now on.
           get_data_from_selection_owner(
             { get_atom(SAVE_TARGETS) },
-            [this]() -> bool { return true; },
+            []() -> bool { return true; },
             x11_clipboard_manager);
         }
       }
