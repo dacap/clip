@@ -1,5 +1,5 @@
 # Clip Library
-# Copyright (c) 2015-2020 David Capello
+# Copyright (c) 2015-2021 David Capello
 
 cmake_minimum_required(VERSION 3.1.2)
 
@@ -20,7 +20,6 @@ if(UNIX AND NOT APPLE)
   option(CLIP_X11_WITH_PNG "Compile with libpng to support copy/paste image in png format" on)
 endif()
 
-include_directories(.)
 set(CLIP_SOURCES clip.cpp image.cpp)
 
 if(WIN32)

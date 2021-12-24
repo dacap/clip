@@ -1,9 +1,10 @@
 # Clip Library
-# Copyright (C) 2015-2016 David Capello
+# Copyright (C) 2015-2021 David Capello
 
 function(add_example name)
   add_executable(${name} ${name}.cpp)
   target_link_libraries(${name} clip)
+  target_include_directories(${name} PUBLIC ..)
 endfunction()
 
 add_example(copy)
