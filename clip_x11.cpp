@@ -1,5 +1,5 @@
 // Clip Library
-// Copyright (c) 2018-2021 David Capello
+// Copyright (c) 2018-2022 David Capello
 //
 // This file is released under the terms of the MIT license.
 // Read LICENSE.txt for more information.
@@ -820,6 +820,7 @@ private:
         "UTF8_STRING",
         "text/plain;charset=utf-8",
         "text/plain;charset=UTF-8",
+        "GTK_TEXT_BUFFER_CONTENTS", // Required for gedit (and maybe gtk+ apps)
         // ANSI C strings?
         "STRING",
         "TEXT",
