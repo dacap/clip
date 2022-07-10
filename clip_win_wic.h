@@ -9,6 +9,7 @@
 #include <algorithm>
 #include <vector>
 
+#include <initguid.h>
 #include <shlwapi.h>
 #include <wincodec.h>
 
