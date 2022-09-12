@@ -183,6 +183,11 @@ bool read_png(const uint8_t* buf,
       return false;
   }
 
+  // Can decoder be nullptr if hr is S_OK/successful? We've received
+  // some crash reports that might indicate this.
+  if (!decoder)
+    return false;
+
   hr = decoder->Initialize(stream.get(), WICDecodeMetadataCacheOnDemand);
   if (FAILED(hr))
     return false;
