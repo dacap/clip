@@ -34,3 +34,24 @@ jobs:
           export XVFB=xvfb-run
         fi
         $XVFB ctest --output-on-failure
+  mingw:
+    runs-on: windows-latest
+    strategy:
+      matrix:
+        sys: [ mingw64, mingw32, ucrt64, clang64 ]
+    defaults:
+      run:
+        shell: msys2 {0}
+    steps:
+    - uses: msys2/setup-msys2@v2
+      with:
+        release: false
+        msystem: ${{matrix.sys}}
+        pacboy: cc:p cmake:p ninja:p
+    - uses: actions/checkout@v2
+    - name: Generating Makefiles
+      run: cmake .
+    - name: Compiling
+      run: cmake --build .
+    - name: Test
+      run: ctest --output-on-failure
