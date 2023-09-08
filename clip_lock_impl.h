@@ -12,6 +12,7 @@ namespace clip {
 class lock::impl {
 public:
   impl(void* native_window_handle);
+  impl(void* native_window_handle, int tries, int sleepms);
   ~impl();
 
   bool locked() const { return m_locked; }

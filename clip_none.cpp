@@ -19,7 +19,10 @@ typedef std::map<format, Buffer> Map;
 static format g_last_format = 100; // TODO create an enum with common formats
 static Map g_data;
 
-lock::impl::impl(void* native_handle) : m_locked(true) {
+lock::impl::impl(void*, int tries, int sleepms) : m_locked(true) {
+}
+
+lock::impl::impl(void* native_handle) : impl(native_handle, 0, 0) {
 }
 
 lock::impl::~impl() {

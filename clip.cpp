@@ -27,7 +27,14 @@ void default_error_handler(ErrorCode code) {
 error_handler g_error_handler = default_error_handler;
 
 lock::lock(void* native_window_handle)
-  : p(new impl(native_window_handle)) {
+  : lock(get_error_handler(), 5, 20, native_window_handle) {
+}
+
+lock::lock(error_handler e, int tries, int sleepms, void* native_window_handle)
+  : p(new impl(native_window_handle, tries, sleepms)) {
+  if (!p->locked() && e) {
+    e(ErrorCode::CannotLock);
+  }
 }
 
 lock::~lock() = default;
@@ -74,6 +81,14 @@ format image_format() { return 2; }
 
 bool has(format f) {
   lock l;
+  if (l.locked())
+    return l.is_convertible(f);
+  else
+    return false;
+}
+
+bool has(format f, error_handler e, int tries, int sleepms) {
+  lock l(e, tries, sleepms);
   if (l.locked())
     return l.is_convertible(f);
   else

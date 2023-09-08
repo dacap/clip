@@ -132,7 +132,10 @@ namespace {
 
 }
 
-lock::impl::impl(void*) : m_locked(true) {
+lock::impl::impl(void*, int tries, int sleepms) : m_locked(true) {
+}
+
+lock::impl::impl(void*) : impl(nullptr, 0, 0) {
 }
 
 lock::impl::~impl() {

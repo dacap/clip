@@ -207,20 +207,17 @@ struct BitmapInfo {
 
 }
 
-lock::impl::impl(void* hwnd) : m_locked(false) {
-  for (int i=0; i<5; ++i) {
+lock::impl::impl(void* hwnd, int tries, int sleepms) : m_locked(false) {
+  for (int i = 0; i < tries; ++i) {
     if (OpenClipboard((HWND)hwnd)) {
       m_locked = true;
       break;
     }
-    Sleep(20);
+    Sleep(sleepms);
   }
+}
 
-  if (!m_locked) {
-    error_handler e = get_error_handler();
-    if (e)
-      e(ErrorCode::CannotLock);
-  }
+lock::impl::impl(void* hwnd) : impl(hwnd, 5, 20) {
 }
 
 lock::impl::~impl() {

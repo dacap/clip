@@ -24,6 +24,22 @@ namespace clip {
   class image;
   struct image_spec;
 
+  // ======================================================================
+  // Error handling
+  // ======================================================================
+
+  enum class ErrorCode {
+    CannotLock,
+    ImageNotSupported,
+  };
+
+  typedef void (*error_handler)(ErrorCode code);
+
+  void set_error_handler(error_handler f);
+  error_handler get_error_handler();
+
+  #define OMIT_LOCKING_ERROR nullptr
+
   class lock {
   public:
     // You can give your current HWND as the "native_window_handle."
@@ -33,6 +49,12 @@ namespace clip {
     // EmptyClipboard() call. Anyway it looks to work just fine if we
     // call OpenClipboard() with a null HWND.
     lock(void* native_window_handle = nullptr);
+    // Creates a lock where you can specify an error handler to use
+    // when the clipboad implementation requires locking it first and
+    // we couldn't get the lock. Also, we can specify the number of
+    // times we want to try to get the clipboard lock and how many
+    // milliseconds we want to wait between tries.
+    lock(error_handler e, int tries, int sleepms, void* native_window_handle = nullptr);
     ~lock();
 
     // Returns true if we've locked the clipboard successfully in
@@ -75,22 +97,14 @@ namespace clip {
   // Returns true if the clipboard has content of the given type.
   bool has(format f);
 
+  // The same as has(format f) but you can specify an error handler when the
+  // clipboard cannot be locked, along with the number of locking tries and
+  // waiting period between tries.
+  bool has(format f, error_handler e, int tries, int sleepms);
+
+
   // Clears the clipboard content.
   bool clear();
-
-  // ======================================================================
-  // Error handling
-  // ======================================================================
-
-  enum class ErrorCode {
-    CannotLock,
-    ImageNotSupported,
-  };
-
-  typedef void (*error_handler)(ErrorCode code);
-
-  void set_error_handler(error_handler f);
-  error_handler get_error_handler();
 
   // ======================================================================
   // Text

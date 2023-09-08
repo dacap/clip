@@ -123,7 +123,7 @@ public:
       if (x11_clipboard_manager) {
         // We have to lock the m_lock mutex that will be used to wait
         // the m_cv condition in get_data_from_selection_owner().
-        if (try_lock()) {
+        if (try_lock(5, 20)) {
           // Start the SAVE_TARGETS mechanism so the X11
           // CLIPBOARD_MANAGER will save our clipboard data
           // from now on.
@@ -148,13 +148,13 @@ public:
       xcb_disconnect(m_connection);
   }
 
-  bool try_lock() {
+  bool try_lock(int tries, int sleepms) {
     bool res = m_lock.try_lock();
     if (!res) {
       // TODO make this configurable (the same for Windows retries)
-      for (int i=0; i<5 && !res; ++i) {
+      for (int i=0; i<tries && !res; ++i) {
         res = m_lock.try_lock();
-        std::this_thread::sleep_for(std::chrono::milliseconds(20));
+        std::this_thread::sleep_for(std::chrono::milliseconds(sleepms));
       }
     }
     return res;
@@ -1045,8 +1045,12 @@ Manager* get_manager() {
 
 } // anonymous namespace
 
+lock::impl::impl(void*, int tries, int sleepms) : m_locked(false) {
+  m_locked = get_manager()->try_lock(tries, sleepms);
+}
+
 lock::impl::impl(void*) : m_locked(false) {
-  m_locked = get_manager()->try_lock();
+  m_locked = get_manager()->try_lock(5, 20);
 }
 
 lock::impl::~impl() {
