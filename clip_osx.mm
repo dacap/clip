@@ -56,7 +56,10 @@ namespace {
 
     // We need three samples for Red/Green/Blue
     if (bitmap.samplesPerPixel >= 3) {
-      int bits_per_sample = bitmap.bitsPerPixel / bitmap.samplesPerPixel;
+      // Here we are guessing the bits per sample (generally 8, not
+      // sure how many bits per sample macOS uses for 16bpp
+      // NSBitmapFormat or if this format is even used).
+      int bits_per_sample = (bitmap.bitsPerPixel == 16 ? 5: 8);
       int bits_shift = 0;
 
       // With alpha
