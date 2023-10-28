@@ -15,15 +15,6 @@
 namespace clip {
 namespace win {
 
-// Pull SHCreateMemStream from shlwapi.dll by ordinal 12
-// for Windows XP support
-// From: https://learn.microsoft.com/en-us/windows/win32/api/shlwapi/nf-shlwapi-shcreatememstream#remarks
-
-typedef IStream* (WINAPI *SHCreateMemStreamPtr)(const BYTE *pInit, UINT cbInit);
-HMODULE shlwapiDLL = LoadLibraryW(L"shlwapi.dll");
-FARPROC pSHCreateMemStreamOrdinal = GetProcAddress(shlwapiDLL, (LPCSTR)12);
-SHCreateMemStreamPtr SHCreateMemStream = (SHCreateMemStreamPtr)pSHCreateMemStreamOrdinal;
-
 // Successful calls to CoInitialize() (S_OK or S_FALSE) must match
 // the calls to CoUninitialize().
 // From: https://docs.microsoft.com/en-us/windows/win32/api/combaseapi/nf-combaseapi-couninitialize#remarks
@@ -175,6 +166,17 @@ bool read_png(const uint8_t* buf,
               image* output_image,
               image_spec* output_spec) {
   coinit com;
+
+#ifdef CLIP_SUPPORT_WINXP
+  // Pull SHCreateMemStream from shlwapi.dll by ordinal 12
+  // for Windows XP support
+  // From: https://learn.microsoft.com/en-us/windows/win32/api/shlwapi/nf-shlwapi-shcreatememstream#remarks
+  
+  typedef IStream* (WINAPI *SHCreateMemStreamPtr)(const BYTE *pInit, UINT cbInit);
+  HMODULE shlwapiDLL = LoadLibraryW(L"shlwapi.dll");
+  FARPROC pSHCreateMemStreamOrdinal = GetProcAddress(shlwapiDLL, (LPCSTR)12);
+  SHCreateMemStreamPtr SHCreateMemStream = (SHCreateMemStreamPtr)pSHCreateMemStreamOrdinal;
+#endif
 
   comptr<IStream> stream(SHCreateMemStream(buf, len));
   if (!stream)
