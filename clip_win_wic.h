@@ -179,6 +179,11 @@ bool read_png(const uint8_t* buf,
 #endif
 
   comptr<IStream> stream(SHCreateMemStream(buf, len));
+  
+#ifdef CLIP_SUPPORT_WINXP
+  FreeLibrary(shlwapiDLL);
+#endif
+
   if (!stream)
     return false;
 
