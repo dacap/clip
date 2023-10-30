@@ -53,6 +53,24 @@ private:
   T* m_ptr = nullptr;
 };
 
+#ifdef CLIP_SUPPORT_WINXP
+class hmodule {
+public:
+  hmodule(LPCWSTR name) : m_ptr(LoadLibraryW(name)) { }
+  hmodule(const hmodule&) = delete;
+  hmodule& operator=(const hmodule&) = delete;
+  ~hmodule() {
+    if (m_ptr)
+      FreeLibrary(m_ptr);
+  }
+
+  operator HMODULE() { return m_ptr; }
+  bool operator!() const { return !m_ptr; }
+private:
+  HMODULE m_ptr = nullptr;
+};
+#endif
+
 //////////////////////////////////////////////////////////////////////
 // Encode the image as PNG format
 
@@ -171,18 +189,19 @@ bool read_png(const uint8_t* buf,
   // Pull SHCreateMemStream from shlwapi.dll by ordinal 12
   // for Windows XP support
   // From: https://learn.microsoft.com/en-us/windows/win32/api/shlwapi/nf-shlwapi-shcreatememstream#remarks
-  
-  typedef IStream* (WINAPI *SHCreateMemStreamPtr)(const BYTE *pInit, UINT cbInit);
-  HMODULE shlwapiDLL = LoadLibraryW(L"shlwapi.dll");
-  FARPROC pSHCreateMemStreamOrdinal = GetProcAddress(shlwapiDLL, (LPCSTR)12);
-  SHCreateMemStreamPtr SHCreateMemStream = (SHCreateMemStreamPtr)pSHCreateMemStreamOrdinal;
+
+  typedef IStream* (WINAPI* SHCreateMemStreamPtr)(const BYTE* pInit, UINT cbInit);
+  hmodule shlwapiDll(L"shlwapi.dll");
+  if (!shlwapiDll)
+    return false;
+
+  auto SHCreateMemStream =
+    reinterpret_cast<SHCreateMemStreamPtr>(GetProcAddress(shlwapiDll, (LPCSTR)12));
+  if (!SHCreateMemStream)
+    return false;
 #endif
 
   comptr<IStream> stream(SHCreateMemStream(buf, len));
-  
-#ifdef CLIP_SUPPORT_WINXP
-  FreeLibrary(shlwapiDLL);
-#endif
 
   if (!stream)
     return false;
