@@ -167,7 +167,23 @@ bool read_png(const uint8_t* buf,
               image_spec* output_spec) {
   coinit com;
 
+#ifdef CLIP_SUPPORT_WINXP
+  // Pull SHCreateMemStream from shlwapi.dll by ordinal 12
+  // for Windows XP support
+  // From: https://learn.microsoft.com/en-us/windows/win32/api/shlwapi/nf-shlwapi-shcreatememstream#remarks
+  
+  typedef IStream* (WINAPI *SHCreateMemStreamPtr)(const BYTE *pInit, UINT cbInit);
+  HMODULE shlwapiDLL = LoadLibraryW(L"shlwapi.dll");
+  FARPROC pSHCreateMemStreamOrdinal = GetProcAddress(shlwapiDLL, (LPCSTR)12);
+  SHCreateMemStreamPtr SHCreateMemStream = (SHCreateMemStreamPtr)pSHCreateMemStreamOrdinal;
+#endif
+
   comptr<IStream> stream(SHCreateMemStream(buf, len));
+  
+#ifdef CLIP_SUPPORT_WINXP
+  FreeLibrary(shlwapiDLL);
+#endif
+
   if (!stream)
     return false;
 
