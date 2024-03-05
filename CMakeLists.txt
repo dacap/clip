@@ -1,5 +1,5 @@
 # Clip Library
-# Copyright (c) 2015-2021 David Capello
+# Copyright (c) 2015-2024 David Capello
 
 cmake_minimum_required(VERSION 3.1.2)
 
@@ -14,13 +14,18 @@ if(CMAKE_CXX_COMPILER_ID STREQUAL "AppleClang")
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -stdlib=libc++")
 endif()
 
+option(CLIP_ENABLE_IMAGE "Compile with support to copy/paste images" on)
 option(CLIP_EXAMPLES "Compile clip examples" on)
 option(CLIP_TESTS "Compile clip tests" on)
 if(UNIX AND NOT APPLE)
   option(CLIP_X11_WITH_PNG "Compile with libpng to support copy/paste image in png format" on)
 endif()
 
-set(CLIP_SOURCES clip.cpp image.cpp)
+set(CLIP_SOURCES clip.cpp)
+
+if(CLIP_ENABLE_IMAGE)
+  list(APPEND CLIP_SOURCES image.cpp)
+endif()
 
 if(WIN32)
   if(MSVC)
@@ -65,6 +70,11 @@ endif()
 
 add_library(clip ${CLIP_SOURCES})
 
+if(CLIP_ENABLE_IMAGE)
+  target_compile_definitions(clip PUBLIC
+    -DCLIP_ENABLE_IMAGE=1)
+endif()
+
 if(WIN32)
   option(CLIP_SUPPORT_WINXP "Enable Windows XP support" OFF)
   if (CLIP_SUPPORT_WINXP)
@@ -87,7 +97,10 @@ elseif(APPLE)
 elseif(UNIX)
   if(HAVE_XCB_XLIB_H)
     target_link_libraries(clip xcb pthread)
-    if(CLIP_X11_WITH_PNG AND HAVE_PNG_H AND PNG_LIBRARY)
+    if(CLIP_ENABLE_IMAGE AND
+       CLIP_X11_WITH_PNG AND
+       HAVE_PNG_H AND
+       PNG_LIBRARY)
       target_link_libraries(clip ${PNG_LIBRARY})
     endif()
   endif()

@@ -1,5 +1,5 @@
 # Clip Library
-# Copyright (C) 2018-2021 David Capello
+# Copyright (C) 2018-2024 David Capello
 
 function(add_clip_test name)
   add_executable(clip_${name} ${name}.cpp)
@@ -11,4 +11,6 @@ endfunction()
 
 add_clip_test(text_tests)
 add_clip_test(user_format_tests)
-add_clip_test(image_tests)
+if(CLIP_ENABLE_IMAGE)
+  add_clip_test(image_tests)
+endif()

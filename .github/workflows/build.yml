@@ -7,6 +7,7 @@ jobs:
       fail-fast: false
       matrix:
         os: [windows-latest, macos-latest, ubuntu-latest]
+        enable_image: [on, off]
     steps:
     - uses: actions/checkout@v2
     - uses: ilammy/msvc-dev-cmd@v1
@@ -15,18 +16,15 @@ jobs:
       shell: bash
       run: |
         if [[ "${{ runner.os }}" == "Windows" ]] ; then
-          cmake . -G "NMake Makefiles"
+          cmake . -G "NMake Makefiles" \
+                  -DCLIP_ENABLE_IMAGE=${{ matrix.enable_image }}
         else
-          cmake . -G "Unix Makefiles"
+          cmake . -G "Unix Makefiles" \
+                  -DCLIP_ENABLE_IMAGE=${{ matrix.enable_image }}
         fi
     - name: Compiling
       shell: bash
-      run: |
-        if [[ "${{ runner.os }}" == "Windows" ]] ; then
-          nmake
-        else
-          make
-        fi
+      run: cmake --build .
     - name: Running Tests
       shell: bash
       run: |

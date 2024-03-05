@@ -1,5 +1,5 @@
 # Clip Library
-# Copyright (C) 2015-2021 David Capello
+# Copyright (C) 2015-2024 David Capello
 
 function(add_example name)
   add_executable(${name} ${name}.cpp)
@@ -11,5 +11,7 @@ add_example(copy)
 add_example(helloworld)
 add_example(int_format)
 add_example(paste)
-add_example(put_image)
-add_example(show_image)
+if(CLIP_ENABLE_IMAGE)
+  add_example(put_image)
+  add_example(show_image)
+endif()

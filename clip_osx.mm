@@ -24,6 +24,8 @@ namespace {
   std::map<std::string, format> g_name_to_format;
   std::map<format, std::string> g_format_to_name;
 
+#if CLIP_ENABLE_IMAGE
+
   bool get_image_from_clipboard(image* output_img,
                                 image_spec* output_spec)
   {
@@ -133,6 +135,8 @@ namespace {
     return true;
   }
 
+#endif // CLIP_ENABLE_IMAGE
+
 }
 
 lock::impl::impl(void*) : m_locked(true) {
@@ -157,10 +161,12 @@ bool lock::impl::is_convertible(format f) const {
     if (f == text_format()) {
       result = [pasteboard availableTypeFromArray:[NSArray arrayWithObject:NSPasteboardTypeString]];
     }
+#if CLIP_ENABLE_IMAGE
     else if (f == image_format()) {
       result = [pasteboard availableTypeFromArray:
                         [NSArray arrayWithObjects:NSPasteboardTypeTIFF,NSPasteboardTypePNG,nil]];
     }
+#endif // CLIP_ENABLE_IMAGE
     else {
       auto it = g_format_to_name.find(f);
       if (it != g_format_to_name.end()) {
@@ -283,6 +289,8 @@ size_t lock::impl::get_data_length(format f) const {
   }
 }
 
+#if CLIP_ENABLE_IMAGE
+
 bool lock::impl::set_image(const image& image) {
   @autoreleasepool {
     NSPasteboard* pasteboard = [NSPasteboard generalPasteboard];
@@ -345,6 +353,8 @@ bool lock::impl::get_image(image& img) const {
 bool lock::impl::get_image_spec(image_spec& spec) const {
   return get_image_from_clipboard(nullptr, &spec);
 }
+
+#endif // CLIP_ENABLE_IMAGE
 
 format register_format(const std::string& name) {
   // Check if the format is already registered
