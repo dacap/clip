@@ -32,13 +32,17 @@ if(WIN32)
   option(CLIP_SUPPORT_WINXP "Enable Windows XP support" OFF)
 
   target_sources(clip PRIVATE clip_win.cpp)
+  if(CLIP_ENABLE_IMAGE)
+    target_sources(clip PRIVATE clip_win_wic.cpp)
+    target_link_libraries(clip shlwapi)
+  endif()
+
   if(MSVC)
     target_compile_definitions(clip PRIVATE -D_SCL_SECURE_NO_WARNINGS)
   endif()
   if (CLIP_SUPPORT_WINXP)
     target_compile_definitions(clip PRIVATE -DCLIP_SUPPORT_WINXP)
   endif()
-  target_link_libraries(clip shlwapi)
 
   # MinGW requires the windowscodecs just because CLSIDs are defined
   # in the windowscodecs.a file instead of the wincodec.h file (?!)
