@@ -74,144 +74,368 @@ private:
   HGLOBAL m_handle;
 };
 
+}
+
+namespace win {
+
 #if CLIP_ENABLE_IMAGE
 
-struct BitmapInfo {
-  BITMAPV5HEADER* b5 = nullptr;
-  BITMAPINFO* bi = nullptr;
-  int width = 0;
-  int height = 0;
-  uint16_t bit_count = 0;
-  uint32_t compression = 0;
-  uint32_t red_mask = 0;
-  uint32_t green_mask = 0;
-  uint32_t blue_mask = 0;
-  uint32_t alpha_mask = 0;
-
-  BitmapInfo() {
-    // Use DIBV5 only for 32 bpp uncompressed bitmaps and when all
-    // masks are valid.
-    if (IsClipboardFormatAvailable(CF_DIBV5)) {
-      b5 = (BITMAPV5HEADER*)GetClipboardData(CF_DIBV5);
-      if (b5 &&
-          b5->bV5BitCount == 32 &&
-          ((b5->bV5Compression == BI_RGB) ||
-           (b5->bV5Compression == BI_BITFIELDS &&
-            b5->bV5RedMask && b5->bV5GreenMask &&
-            b5->bV5BlueMask && b5->bV5AlphaMask))) {
-        width       = b5->bV5Width;
-        height      = b5->bV5Height;
-        bit_count   = b5->bV5BitCount;
-        compression = b5->bV5Compression;
-        if (compression == BI_BITFIELDS) {
-          red_mask    = b5->bV5RedMask;
-          green_mask  = b5->bV5GreenMask;
-          blue_mask   = b5->bV5BlueMask;
-          alpha_mask  = b5->bV5AlphaMask;
-        }
-        else {
-          red_mask    = 0xff0000;
-          green_mask  = 0xff00;
-          blue_mask   = 0xff;
-          alpha_mask  = 0xff000000;
-        }
-        return;
-      }
-    }
-
-    if (IsClipboardFormatAvailable(CF_DIB))
-      bi = (BITMAPINFO*)GetClipboardData(CF_DIB);
-    if (!bi)
+BitmapInfo::BitmapInfo() {
+  // Use DIBV5 only for 32 bpp uncompressed bitmaps and when all
+  // masks are valid.
+  if (IsClipboardFormatAvailable(CF_DIBV5)) {
+    b5 = (BITMAPV5HEADER*)GetClipboardData(CF_DIBV5);
+    if (load_from(b5))
       return;
+  }
 
-    width       = bi->bmiHeader.biWidth;
-    height      = bi->bmiHeader.biHeight;
-    bit_count   = bi->bmiHeader.biBitCount;
-    compression = bi->bmiHeader.biCompression;
+  if (IsClipboardFormatAvailable(CF_DIB))
+    bi = (BITMAPINFO*)GetClipboardData(CF_DIB);
 
+  load_from(bi);
+}
+
+BitmapInfo::BitmapInfo(BITMAPV5HEADER* pb5) {
+  if (load_from(pb5))
+    b5 = pb5;
+}
+
+BitmapInfo::BitmapInfo(BITMAPINFO* pbi) {
+  if (load_from(pbi))
+    bi = pbi;
+}
+
+bool BitmapInfo::load_from(BITMAPV5HEADER* b5) {
+  if (b5 &&
+      b5->bV5BitCount == 32 &&
+      ((b5->bV5Compression == BI_RGB) ||
+       (b5->bV5Compression == BI_BITFIELDS &&
+        b5->bV5RedMask && b5->bV5GreenMask &&
+        b5->bV5BlueMask && b5->bV5AlphaMask))) {
+    width       = b5->bV5Width;
+    height      = b5->bV5Height;
+    bit_count   = b5->bV5BitCount;
+    compression = b5->bV5Compression;
     if (compression == BI_BITFIELDS) {
-      red_mask   = *((uint32_t*)&bi->bmiColors[0]);
-      green_mask = *((uint32_t*)&bi->bmiColors[1]);
-      blue_mask  = *((uint32_t*)&bi->bmiColors[2]);
-      if (bit_count == 32)
+      red_mask   = b5->bV5RedMask;
+      green_mask = b5->bV5GreenMask;
+      blue_mask  = b5->bV5BlueMask;
+      alpha_mask = b5->bV5AlphaMask;
+    }
+    else {
+      red_mask   = 0xff0000;
+      green_mask = 0xff00;
+      blue_mask  = 0xff;
+      alpha_mask = 0xff000000;
+    }
+    return true;
+  }
+
+  return false;
+}
+
+bool BitmapInfo::load_from(BITMAPINFO* bi) {
+  if (!bi)
+    return false;
+
+  width       = bi->bmiHeader.biWidth;
+  height      = bi->bmiHeader.biHeight;
+  bit_count   = bi->bmiHeader.biBitCount;
+  compression = bi->bmiHeader.biCompression;
+
+  if (compression == BI_BITFIELDS) {
+    red_mask   = *((uint32_t*)&bi->bmiColors[0]);
+    green_mask = *((uint32_t*)&bi->bmiColors[1]);
+    blue_mask  = *((uint32_t*)&bi->bmiColors[2]);
+    if (bit_count == 32)
+      alpha_mask = 0xff000000;
+  }
+  else if (compression == BI_RGB) {
+    switch (bit_count) {
+      case 32:
+        red_mask   = 0xff0000;
+        green_mask = 0xff00;
+        blue_mask  = 0xff;
         alpha_mask = 0xff000000;
-    }
-    else if (compression == BI_RGB) {
-      switch (bit_count) {
-        case 32:
-          red_mask   = 0xff0000;
-          green_mask = 0xff00;
-          blue_mask  = 0xff;
-          alpha_mask = 0xff000000;
-          break;
-        case 24:
-        case 8: // We return 8bpp images as 24bpp
-          red_mask   = 0xff0000;
-          green_mask = 0xff00;
-          blue_mask  = 0xff;
-          break;
-        case 16:
-          red_mask   = 0x7c00;
-          green_mask = 0x03e0;
-          blue_mask  = 0x001f;
-          break;
-      }
-    }
-  }
-
-  bool is_valid() const {
-    return (b5 || bi);
-  }
-
-  void fill_spec(image_spec& spec) {
-    spec.width = width;
-    spec.height = (height >= 0 ? height: -height);
-    // We convert indexed to 24bpp RGB images to match the OS X behavior
-    spec.bits_per_pixel = bit_count;
-    if (spec.bits_per_pixel <= 8)
-      spec.bits_per_pixel = 24;
-    spec.bytes_per_row = width*((spec.bits_per_pixel+7)/8);
-    spec.red_mask   = red_mask;
-    spec.green_mask = green_mask;
-    spec.blue_mask  = blue_mask;
-    spec.alpha_mask = alpha_mask;
-
-    switch (spec.bits_per_pixel) {
-
-      case 24: {
-        // We need one extra byte to avoid a crash updating the last
-        // pixel on last row using:
-        //
-        //   *((uint32_t*)ptr) = pixel24bpp;
-        //
-        ++spec.bytes_per_row;
-
-        // Align each row to 32bpp
-        int padding = (4-(spec.bytes_per_row&3))&3;
-        spec.bytes_per_row += padding;
         break;
-      }
-
-      case 16: {
-        int padding = (4-(spec.bytes_per_row&3))&3;
-        spec.bytes_per_row += padding;
+      case 24:
+      case 8: // We return 8bpp images as 24bpp
+        red_mask   = 0xff0000;
+        green_mask = 0xff00;
+        blue_mask  = 0xff;
         break;
-      }
-    }
-
-    unsigned long* masks = &spec.red_mask;
-    unsigned long* shifts = &spec.red_shift;
-    for (unsigned long* shift=shifts, *mask=masks; shift<shifts+4; ++shift, ++mask) {
-      if (*mask)
-        *shift = get_shift_from_mask(*mask);
+      case 16:
+        red_mask   = 0x7c00;
+        green_mask = 0x03e0;
+        blue_mask  = 0x001f;
+        break;
     }
   }
+  return true;
+}
 
-};
+bool BitmapInfo::is_valid() const {
+  return (b5 || bi);
+}
+
+void BitmapInfo::fill_spec(image_spec& spec) const {
+  spec.width = width;
+  spec.height = (height >= 0 ? height : -height);
+  // We convert indexed to 24bpp RGB images to match the OS X behavior
+  spec.bits_per_pixel = bit_count;
+  if (spec.bits_per_pixel <= 8)
+    spec.bits_per_pixel = 24;
+  spec.bytes_per_row = width*((spec.bits_per_pixel+7)/8);
+  spec.red_mask   = red_mask;
+  spec.green_mask = green_mask;
+  spec.blue_mask  = blue_mask;
+  spec.alpha_mask = alpha_mask;
+
+  switch (spec.bits_per_pixel) {
+
+  case 24: {
+    // We need one extra byte to avoid a crash updating the last
+    // pixel on last row using:
+    //
+    //   *((uint32_t*)ptr) = pixel24bpp;
+    //
+    ++spec.bytes_per_row;
+
+    // Align each row to 32bpp
+    int padding = (4-(spec.bytes_per_row&3))&3;
+    spec.bytes_per_row += padding;
+    break;
+  }
+
+  case 16: {
+    int padding = (4-(spec.bytes_per_row&3))&3;
+    spec.bytes_per_row += padding;
+    break;
+  }
+  }
+
+  unsigned long* masks = &spec.red_mask;
+  unsigned long* shifts = &spec.red_shift;
+  for (unsigned long* shift=shifts, *mask=masks; shift<shifts+4; ++shift, ++mask) {
+    if (*mask)
+      *shift = get_shift_from_mask(*mask);
+  }
+}
+
+//////////////////////////////////////////////////////////////////////
+// Encode the image as PNG format
+
+bool write_png_on_stream(const image& image,
+                         IStream* stream) {
+  const image_spec& spec = image.spec();
+
+  comptr<IWICBitmapEncoder> encoder;
+  HRESULT hr = CoCreateInstance(CLSID_WICPngEncoder,
+                                nullptr, CLSCTX_INPROC_SERVER,
+                                IID_PPV_ARGS(&encoder));
+  if (FAILED(hr))
+    return false;
+
+  hr = encoder->Initialize(stream, WICBitmapEncoderNoCache);
+  if (FAILED(hr))
+    return false;
+
+  comptr<IWICBitmapFrameEncode> frame;
+  comptr<IPropertyBag2> options;
+  hr = encoder->CreateNewFrame(&frame, &options);
+  if (FAILED(hr))
+    return false;
+
+  hr = frame->Initialize(options.get());
+  if (FAILED(hr))
+    return false;
+
+  // PNG encoder (and decoder) only supports GUID_WICPixelFormat32bppBGRA for 32bpp.
+  // See: https://docs.microsoft.com/en-us/windows/win32/wic/-wic-codec-native-pixel-formats#png-native-codec
+  WICPixelFormatGUID pixelFormat = GUID_WICPixelFormat32bppBGRA;
+  hr = frame->SetPixelFormat(&pixelFormat);
+  if (FAILED(hr))
+    return false;
+
+  hr = frame->SetSize(spec.width, spec.height);
+  if (FAILED(hr))
+    return false;
+
+  std::vector<uint32_t> buf;
+  uint8_t* ptr = (uint8_t*)image.data();
+  int bytes_per_row = spec.bytes_per_row;
+
+  // Convert to GUID_WICPixelFormat32bppBGRA if needed
+  if (spec.red_mask   != 0xff0000 ||
+      spec.green_mask != 0xff00 ||
+      spec.blue_mask  != 0xff ||
+      spec.alpha_mask != 0xff000000) {
+    buf.resize(spec.width * spec.height);
+    uint32_t* dst = (uint32_t*)&buf[0];
+    uint32_t* src = (uint32_t*)image.data();
+    for (int y = 0; y < spec.height; ++y) {
+      auto src_line_start = src;
+      for (int x = 0; x < spec.width; ++x) {
+        uint32_t c = *src;
+        *dst = ((((c & spec.red_mask)   >> spec.red_shift)   << 16) |
+                (((c & spec.green_mask) >> spec.green_shift) << 8) |
+                (((c & spec.blue_mask)  >> spec.blue_shift)) |
+                (((c & spec.alpha_mask) >> spec.alpha_shift) << 24));
+        ++dst;
+        ++src;
+      }
+      src = (uint32_t*)(((uint8_t*)src_line_start) + spec.bytes_per_row);
+    }
+    ptr = (uint8_t*)&buf[0];
+    bytes_per_row = 4 * spec.width;
+  }
+
+  hr = frame->WritePixels(spec.height,
+                          bytes_per_row,
+                          bytes_per_row * spec.height,
+                          (BYTE*)ptr);
+  if (FAILED(hr))
+    return false;
+
+  hr = frame->Commit();
+  if (FAILED(hr))
+    return false;
+
+  hr = encoder->Commit();
+  if (FAILED(hr))
+    return false;
+
+  return true;
+}
+
+HGLOBAL write_png(const image& image) {
+  coinit com;
+
+  comptr<IStream> stream;
+  HRESULT hr = CreateStreamOnHGlobal(nullptr, false, &stream);
+  if (FAILED(hr))
+    return nullptr;
+
+  bool result = write_png_on_stream(image, stream.get());
+
+  HGLOBAL handle;
+  hr = GetHGlobalFromStream(stream.get(), &handle);
+  if (result)
+    return handle;
+
+  GlobalFree(handle);
+  return nullptr;
+}
+
+//////////////////////////////////////////////////////////////////////
+// Decode the clipboard data from PNG format
+
+bool read_png(const uint8_t* buf,
+              const UINT len,
+              image* output_image,
+              image_spec* output_spec) {
+  coinit com;
+
+#ifdef CLIP_SUPPORT_WINXP
+  // Pull SHCreateMemStream from shlwapi.dll by ordinal 12
+  // for Windows XP support
+  // From: https://learn.microsoft.com/en-us/windows/win32/api/shlwapi/nf-shlwapi-shcreatememstream#remarks
+
+  typedef IStream* (WINAPI* SHCreateMemStreamPtr)(const BYTE* pInit, UINT cbInit);
+  hmodule shlwapiDll(L"shlwapi.dll");
+  if (!shlwapiDll)
+    return false;
+
+  auto SHCreateMemStream =
+    reinterpret_cast<SHCreateMemStreamPtr>(GetProcAddress(shlwapiDll, (LPCSTR)12));
+  if (!SHCreateMemStream)
+    return false;
+#endif
+
+  comptr<IStream> stream(SHCreateMemStream(buf, len));
+
+  if (!stream)
+    return false;
+
+  comptr<IWICBitmapDecoder> decoder;
+  HRESULT hr = CoCreateInstance(CLSID_WICPngDecoder2,
+                                nullptr, CLSCTX_INPROC_SERVER,
+                                IID_PPV_ARGS(&decoder));
+  if (FAILED(hr)) {
+    hr = CoCreateInstance(CLSID_WICPngDecoder1,
+                          nullptr, CLSCTX_INPROC_SERVER,
+                          IID_PPV_ARGS(&decoder));
+    if (FAILED(hr))
+      return false;
+  }
+
+  // Can decoder be nullptr if hr is S_OK/successful? We've received
+  // some crash reports that might indicate this.
+  if (!decoder)
+    return false;
+
+  hr = decoder->Initialize(stream.get(), WICDecodeMetadataCacheOnDemand);
+  if (FAILED(hr))
+    return false;
+
+  comptr<IWICBitmapFrameDecode> frame;
+  hr = decoder->GetFrame(0, &frame);
+  if (FAILED(hr))
+    return false;
+
+  WICPixelFormatGUID pixelFormat;
+  hr = frame->GetPixelFormat(&pixelFormat);
+  if (FAILED(hr))
+    return false;
+
+  // Only support this pixel format
+  // TODO add support for more pixel formats
+  if (pixelFormat != GUID_WICPixelFormat32bppBGRA)
+    return false;
+
+  UINT width = 0, height = 0;
+  hr = frame->GetSize(&width, &height);
+  if (FAILED(hr))
+    return false;
+
+  image_spec spec;
+  spec.width = width;
+  spec.height = height;
+  spec.bits_per_pixel = 32;
+  spec.bytes_per_row = 4 * width;
+  spec.red_mask    = 0xff0000;
+  spec.green_mask  = 0xff00;
+  spec.blue_mask   = 0xff;
+  spec.alpha_mask  = 0xff000000;
+  spec.red_shift   = 16;
+  spec.green_shift = 8;
+  spec.blue_shift  = 0;
+  spec.alpha_shift = 24;
+
+  if (output_spec)
+    *output_spec = spec;
+
+  if (output_image) {
+    image img(spec);
+
+    hr = frame->CopyPixels(
+      nullptr, // Entire bitmap
+      spec.bytes_per_row,
+      spec.bytes_per_row * spec.height,
+      (BYTE*)img.data());
+    if (FAILED(hr)) {
+      return false;
+    }
+
+    std::swap(*output_image, img);
+  }
+
+  return true;
+}
 
 #endif // CLIP_ENABLE_IMAGE
 
-}
+} // namespace win
 
 lock::impl::impl(void* hwnd) : m_locked(false) {
   for (int i=0; i<5; ++i) {
@@ -416,22 +640,11 @@ size_t lock::impl::get_data_length(format f) const {
 
 #if CLIP_ENABLE_IMAGE
 
-bool lock::impl::set_image(const image& image) {
+namespace win {
+
+HGLOBAL create_dibv5(const image& image)
+{
   const image_spec& spec = image.spec();
-
-  // Add the PNG clipboard format for images with alpha channel
-  // (useful to communicate with some Windows programs that only use
-  // alpha data from PNG clipboard format)
-  if (spec.bits_per_pixel == 32 &&
-      spec.alpha_mask) {
-    UINT png_format = RegisterClipboardFormatA("PNG");
-    if (png_format) {
-      Hglobal png_handle(win::write_png(image));
-      if (png_handle)
-        SetClipboardData(png_format, png_handle);
-    }
-  }
-
   image_spec out_spec = spec;
 
   int palette_colors = 0;
@@ -444,14 +657,14 @@ bool lock::impl::set_image(const image& image) {
   out_spec.bytes_per_row += padding;
 
   // Create the BITMAPV5HEADER structure
-  Hglobal hmem(
+  HGLOBAL hmem =
     GlobalAlloc(
       GHND,
       sizeof(BITMAPV5HEADER)
       + palette_colors*sizeof(RGBQUAD)
-      + out_spec.bytes_per_row*out_spec.height));
+      + out_spec.bytes_per_row*out_spec.height);
   if (!hmem)
-    return false;
+    return nullptr;
 
   out_spec.red_mask    = 0x00ff0000;
   out_spec.green_mask  = 0xff00;
@@ -514,10 +727,34 @@ bool lock::impl::set_image(const image& image) {
       error_handler e = get_error_handler();
       if (e)
         e(ErrorCode::ImageNotSupported);
-      return false;
+      return nullptr;
   }
 
   GlobalUnlock(hmem);
+  return hmem;
+}
+}  // namespace win
+
+bool lock::impl::set_image(const image& image) {
+  const image_spec& spec = image.spec();
+
+  // Add the PNG clipboard format for images with alpha channel
+  // (useful to communicate with some Windows programs that only use
+  // alpha data from PNG clipboard format)
+  if (spec.bits_per_pixel == 32 &&
+      spec.alpha_mask) {
+    UINT png_format = RegisterClipboardFormatA("PNG");
+    if (png_format) {
+      Hglobal png_handle(win::write_png(image));
+      if (png_handle)
+        SetClipboardData(png_format, png_handle);
+    }
+  }
+
+  Hglobal hmem(clip::win::create_dibv5(image));
+  if (!hmem)
+    return false;
+
   SetClipboardData(CF_DIBV5, hmem);
   return true;
 }
@@ -539,9 +776,15 @@ bool lock::impl::get_image(image& output_img) const {
     }
   }
 
-  BitmapInfo bi;
+  win::BitmapInfo bi;
+  return create_img(bi, output_img);
+}
+
+namespace win {
+bool create_img(const win::BitmapInfo& bi, image& output_img) {
   if (!bi.is_valid()) {
-    // There is no image at all in the clipboard, no need to report
+    // There is no valid image. Maybe because there is no image at all in the clipboard
+    // when using the BitmapInfo default constructor. No need to report
     // this as an error, just return false.
     return false;
   }
@@ -620,6 +863,7 @@ bool lock::impl::get_image(image& output_img) const {
   std::swap(output_img, img);
   return true;
 }
+}
 
 bool lock::impl::get_image_spec(image_spec& spec) const {
   UINT png_format = RegisterClipboardFormatA("PNG");
@@ -635,7 +879,7 @@ bool lock::impl::get_image_spec(image_spec& spec) const {
     }
   }
 
-  BitmapInfo bi;
+  win::BitmapInfo bi;
   if (!bi.is_valid())
     return false;
   bi.fill_spec(spec);
