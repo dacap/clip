@@ -8,6 +8,10 @@
 #define CLIP_WIN_WIC_H_INCLUDED
 #pragma once
 
+#if !CLIP_ENABLE_IMAGE
+  #error This file can be include only when CLIP_ENABLE_IMAGE is defined
+#endif
+
 #include <cstdint>
 
 #include <windows.h>

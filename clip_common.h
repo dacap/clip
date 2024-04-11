@@ -8,6 +8,8 @@
 #define CLIP_COMMON_H_INCLUDED
 #pragma once
 
+#include "clip.h"
+
 namespace clip {
 namespace details {
 

@@ -33,7 +33,7 @@ if(WIN32)
 
   target_sources(clip PRIVATE clip_win.cpp)
   if(CLIP_ENABLE_IMAGE)
-    target_sources(clip PRIVATE clip_win_wic.cpp)
+    target_sources(clip PRIVATE clip_win_bmp.cpp clip_win_wic.cpp)
     target_link_libraries(clip shlwapi)
   endif()
 
