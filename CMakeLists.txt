@@ -53,7 +53,7 @@ if(WIN32)
     endif()
   endif()
 elseif(APPLE)
-  target_link_options(clip PRIVATE -fobjc-arc)
+  target_compile_options(clip PRIVATE -fobjc-arc)
 
   find_library(COCOA_LIBRARY Cocoa)
   if(COCOA_LIBRARY)
