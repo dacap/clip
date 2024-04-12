@@ -8,7 +8,7 @@ function(add_example name)
 endfunction()
 
 add_example(copy)
-add_example(helloworld)
+add_example(hello_world)
 add_example(int_format)
 add_example(paste)
 if(CLIP_ENABLE_IMAGE)
