@@ -141,7 +141,7 @@ namespace osx {
 
 #endif // CLIP_ENABLE_IMAGE
 
-}
+} // namespace osx
 
 lock::impl::impl(void*) : m_locked(true) {
 }
@@ -351,11 +351,13 @@ bool lock::impl::set_image(const image& image) {
 }
 
 bool lock::impl::get_image(image& img) const {
-  return osx::get_image_from_clipboard([NSPasteboard generalPasteboard], &img, nullptr);
+  NSPasteboard* pasteboard = [NSPasteboard generalPasteboard];
+  return osx::get_image_from_clipboard(pasteboard, &img, nullptr);
 }
 
 bool lock::impl::get_image_spec(image_spec& spec) const {
-  return osx::get_image_from_clipboard([NSPasteboard generalPasteboard], nullptr, &spec);
+  NSPasteboard* pasteboard = [NSPasteboard generalPasteboard];
+  return osx::get_image_from_clipboard(pasteboard, nullptr, &spec);
 }
 
 #endif // CLIP_ENABLE_IMAGE
