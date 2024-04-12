@@ -7,7 +7,6 @@
 #include "clip_win.h"
 
 #include "clip.h"
-#include "clip_common.h"
 #include "clip_lock_impl.h"
 
 #include <algorithm>
@@ -275,92 +274,10 @@ bool lock::impl::set_image(const image& image) {
     }
   }
 
-  image_spec out_spec = spec;
-
-  int palette_colors = 0;
-  int padding = 0;
-  switch (spec.bits_per_pixel) {
-    case 24: padding = (4-((spec.width*3)&3))&3; break;
-    case 16: padding = ((4-((spec.width*2)&3))&3)/2; break;
-    case 8:  padding = (4-(spec.width&3))&3; break;
-  }
-  out_spec.bytes_per_row += padding;
-
-  // Create the BITMAPV5HEADER structure
-  Hglobal hmem(
-    GlobalAlloc(
-      GHND,
-      sizeof(BITMAPV5HEADER)
-      + palette_colors*sizeof(RGBQUAD)
-      + out_spec.bytes_per_row*out_spec.height));
+  Hglobal hmem(clip::win::create_dibv5(image));
   if (!hmem)
     return false;
 
-  out_spec.red_mask    = 0x00ff0000;
-  out_spec.green_mask  = 0xff00;
-  out_spec.blue_mask   = 0xff;
-  out_spec.alpha_mask  = 0xff000000;
-  out_spec.red_shift   = 16;
-  out_spec.green_shift = 8;
-  out_spec.blue_shift  = 0;
-  out_spec.alpha_shift = 24;
-
-  BITMAPV5HEADER* bi = (BITMAPV5HEADER*)GlobalLock(hmem);
-  bi->bV5Size = sizeof(BITMAPV5HEADER);
-  bi->bV5Width = out_spec.width;
-  bi->bV5Height = out_spec.height;
-  bi->bV5Planes = 1;
-  bi->bV5BitCount = (WORD)out_spec.bits_per_pixel;
-  bi->bV5Compression = BI_RGB;
-  bi->bV5SizeImage = out_spec.bytes_per_row*spec.height;
-  bi->bV5RedMask   = out_spec.red_mask;
-  bi->bV5GreenMask = out_spec.green_mask;
-  bi->bV5BlueMask  = out_spec.blue_mask;
-  bi->bV5AlphaMask = out_spec.alpha_mask;
-  bi->bV5CSType = LCS_WINDOWS_COLOR_SPACE;
-  bi->bV5Intent = LCS_GM_GRAPHICS;
-  bi->bV5ClrUsed = 0;
-
-  switch (spec.bits_per_pixel) {
-    case 32: {
-      const char* src = image.data();
-      char* dst = (((char*)bi)+bi->bV5Size) + (out_spec.height-1)*out_spec.bytes_per_row;
-      for (long y=spec.height-1; y>=0; --y) {
-        const uint32_t* src_x = (const uint32_t*)src;
-        uint32_t* dst_x = (uint32_t*)dst;
-
-        for (unsigned long x=0; x<spec.width; ++x, ++src_x, ++dst_x) {
-          uint32_t c = *src_x;
-          int r = ((c & spec.red_mask  ) >> spec.red_shift  );
-          int g = ((c & spec.green_mask) >> spec.green_shift);
-          int b = ((c & spec.blue_mask ) >> spec.blue_shift );
-          int a = ((c & spec.alpha_mask) >> spec.alpha_shift);
-
-          // Windows requires premultiplied RGBA values
-          r = r * a / 255;
-          g = g * a / 255;
-          b = b * a / 255;
-
-          *dst_x =
-            (r << out_spec.red_shift  ) |
-            (g << out_spec.green_shift) |
-            (b << out_spec.blue_shift ) |
-            (a << out_spec.alpha_shift);
-        }
-
-        src += spec.bytes_per_row;
-        dst -= out_spec.bytes_per_row;
-      }
-      break;
-    }
-    default:
-      error_handler e = get_error_handler();
-      if (e)
-        e(ErrorCode::ImageNotSupported);
-      return false;
-  }
-
-  GlobalUnlock(hmem);
   SetClipboardData(CF_DIBV5, hmem);
   return true;
 }
@@ -383,85 +300,7 @@ bool lock::impl::get_image(image& output_img) const {
   }
 
   win::BitmapInfo bi;
-  if (!bi.is_valid()) {
-    // There is no image at all in the clipboard, no need to report
-    // this as an error, just return false.
-    return false;
-  }
-
-  image_spec spec;
-  bi.fill_spec(spec);
-  image img(spec);
-
-  switch (bi.bit_count) {
-
-    case 32:
-    case 24:
-    case 16: {
-      const uint8_t* src = nullptr;
-
-      if (bi.compression == BI_RGB ||
-          bi.compression == BI_BITFIELDS) {
-        if (bi.b5)
-          src = ((uint8_t*)bi.b5) + bi.b5->bV5Size;
-        else
-          src = ((uint8_t*)bi.bi) + bi.bi->bmiHeader.biSize;
-        if (bi.compression == BI_BITFIELDS)
-          src += sizeof(RGBQUAD)*3;
-      }
-
-      if (src) {
-        const int src_bytes_per_row = spec.width*((bi.bit_count+7)/8);
-        const int padding = (4-(src_bytes_per_row&3))&3;
-
-        for (long y=spec.height-1; y>=0; --y, src+=src_bytes_per_row+padding) {
-          char* dst = img.data()+y*spec.bytes_per_row;
-          std::copy(src, src+src_bytes_per_row, dst);
-        }
-      }
-
-      // Windows uses premultiplied RGB values, and we use straight
-      // alpha. So we have to divide all RGB values by its alpha.
-      if (bi.bit_count == 32 && spec.alpha_mask) {
-        details::divide_rgb_by_alpha(img);
-      }
-      break;
-    }
-
-    case 8: {
-      assert(bi.bi);
-
-      const int colors = (bi.bi->bmiHeader.biClrUsed > 0 ? bi.bi->bmiHeader.biClrUsed: 256);
-      std::vector<uint32_t> palette(colors);
-      for (int c=0; c<colors; ++c) {
-        palette[c] =
-          (bi.bi->bmiColors[c].rgbRed   << spec.red_shift) |
-          (bi.bi->bmiColors[c].rgbGreen << spec.green_shift) |
-          (bi.bi->bmiColors[c].rgbBlue  << spec.blue_shift);
-      }
-
-      const uint8_t* src = (((uint8_t*)bi.bi) + bi.bi->bmiHeader.biSize + sizeof(RGBQUAD)*colors);
-      const int padding = (4-(spec.width&3))&3;
-
-      for (long y=spec.height-1; y>=0; --y, src+=padding) {
-        char* dst = img.data()+y*spec.bytes_per_row;
-
-        for (unsigned long x=0; x<spec.width; ++x, ++src, dst+=3) {
-          int idx = *src;
-          if (idx < 0)
-            idx = 0;
-          else if (idx >= colors)
-            idx = colors-1;
-
-          *((uint32_t*)dst) = palette[idx];
-        }
-      }
-      break;
-    }
-  }
-
-  std::swap(output_img, img);
-  return true;
+  return bi.to_image(output_img);
 }
 
 bool lock::impl::get_image_spec(image_spec& spec) const {

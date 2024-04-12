@@ -18,6 +18,7 @@
 
 namespace clip {
 
+class image;
 struct image_spec;
 
 namespace win {
@@ -35,13 +36,29 @@ struct BitmapInfo {
   uint32_t alpha_mask = 0;
 
   BitmapInfo();
+  explicit BitmapInfo(BITMAPV5HEADER* pb5);
+  explicit BitmapInfo(BITMAPINFO* pbi);
 
   bool is_valid() const {
     return (b5 || bi);
   }
 
-  void fill_spec(image_spec& spec);
+  void fill_spec(image_spec& spec) const;
+
+  // Fills the output_img with the data provided by this
+  // BitmapInfo. Returns true if it was able to fill the output image
+  // or false otherwise.
+  bool to_image(image& output_img) const;
+
+private:
+  bool load_from(BITMAPV5HEADER* b5);
+  bool load_from(BITMAPINFO* bi);
 };
+
+// Returns a handle to the HGLOBAL memory reserved to create a DIBV5
+// based on the image passed by parameter. Returns null if it cannot
+// create the handle.
+HGLOBAL create_dibv5(const image& image);
 
 } // namespace win
 } // namespace clip
