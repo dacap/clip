@@ -24,12 +24,16 @@ namespace {
   std::map<std::string, format> g_name_to_format;
   std::map<format, std::string> g_format_to_name;
 
+}
+
+namespace osx {
+
 #if CLIP_ENABLE_IMAGE
 
-  bool get_image_from_clipboard(image* output_img,
+  bool get_image_from_clipboard(NSPasteboard* pasteboard,
+                                image* output_img,
                                 image_spec* output_spec)
   {
-    NSPasteboard* pasteboard = [NSPasteboard generalPasteboard];
     NSString* result = [pasteboard availableTypeFromArray:
                                 [NSArray arrayWithObjects:NSPasteboardTypeTIFF,NSPasteboardTypePNG,nil]];
 
@@ -347,11 +351,11 @@ bool lock::impl::set_image(const image& image) {
 }
 
 bool lock::impl::get_image(image& img) const {
-  return get_image_from_clipboard(&img, nullptr);
+  return osx::get_image_from_clipboard([NSPasteboard generalPasteboard], &img, nullptr);
 }
 
 bool lock::impl::get_image_spec(image_spec& spec) const {
-  return get_image_from_clipboard(nullptr, &spec);
+  return osx::get_image_from_clipboard([NSPasteboard generalPasteboard], nullptr, &spec);
 }
 
 #endif // CLIP_ENABLE_IMAGE
