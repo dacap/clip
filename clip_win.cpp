@@ -53,6 +53,20 @@ private:
   HGLOBAL m_handle;
 };
 
+class AnonymousTokenImpersonator {
+public:
+  AnonymousTokenImpersonator()
+    : must_revert(ImpersonateAnonymousToken(GetCurrentThread()))
+  {}
+
+  ~AnonymousTokenImpersonator() {
+    if (must_revert)
+      RevertToSelf();
+  }
+private:
+  const bool must_revert;
+};
+
 }
 
 lock::impl::impl(void* hwnd) : m_locked(false) {
@@ -72,8 +86,10 @@ lock::impl::impl(void* hwnd) : m_locked(false) {
 }
 
 lock::impl::~impl() {
-  if (m_locked)
+  if (m_locked) {
+    AnonymousTokenImpersonator guard{};
     CloseClipboard();
+  }
 }
 
 bool lock::impl::clear() {
