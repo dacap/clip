@@ -53,18 +53,30 @@ private:
   HGLOBAL m_handle;
 };
 
+
+// From: https://issues.chromium.org/issues/40080988#comment8
+//
+//  "Adds impersonation of the anonymous token around calls to the
+//   CloseClipboard() system call. On Windows 8+ the win32k driver
+//   captures the access token of the caller and makes it available to
+//   other users on the desktop through the system call
+//   GetClipboardAccessToken(). This introduces a risk of privilege
+//   escalation in sandboxed processes. By performing the
+//   impersonation then whenever Chrome writes data to the clipboard
+//   only the anonymous token is available."
+//
 class AnonymousTokenImpersonator {
 public:
   AnonymousTokenImpersonator()
-    : must_revert(ImpersonateAnonymousToken(GetCurrentThread()))
+    : m_must_revert(ImpersonateAnonymousToken(GetCurrentThread()))
   {}
 
   ~AnonymousTokenImpersonator() {
-    if (must_revert)
+    if (m_must_revert)
       RevertToSelf();
   }
 private:
-  const bool must_revert;
+  const bool m_must_revert;
 };
 
 }
@@ -87,7 +99,7 @@ lock::impl::impl(void* hwnd) : m_locked(false) {
 
 lock::impl::~impl() {
   if (m_locked) {
-    AnonymousTokenImpersonator guard{};
+    AnonymousTokenImpersonator guard;
     CloseClipboard();
   }
 }
