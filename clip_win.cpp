@@ -55,14 +55,16 @@ private:
 
 class AnonymousTokenImpersonator {
 public:
-	AnonymousTokenImpersonator()
-	    : must_revert(::ImpersonateAnonymousToken(::GetCurrentThread())) {
-	}
-	~AnonymousTokenImpersonator() {
-		if (must_revert) ::RevertToSelf();
-	}
+  AnonymousTokenImpersonator()
+    : must_revert(ImpersonateAnonymousToken(GetCurrentThread()))
+  {}
+
+  ~AnonymousTokenImpersonator() {
+    if (must_revert)
+      RevertToSelf();
+  }
 private:
-	const bool must_revert;
+  const bool must_revert;
 };
 
 }
