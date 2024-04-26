@@ -38,6 +38,31 @@ bool read_png(const uint8_t* buf,
               image* output_image,
               image_spec* output_spec);
 
+//////////////////////////////////////////////////////////////////////
+// Decode the clipboard data from JPEG format
+
+bool read_jpg(const uint8_t* buf,
+              const UINT len,
+              image* output_image,
+              image_spec* output_spec);
+
+//////////////////////////////////////////////////////////////////////
+// Decode the clipboard data from GIF format
+
+bool read_gif(const uint8_t* buf,
+              const UINT len,
+              image* output_image,
+              image_spec* output_spec);
+
+//////////////////////////////////////////////////////////////////////
+// Decode the clipboard data from BMP format
+
+bool read_bmp(const uint8_t* buf,
+              const UINT len,
+              image* output_image,
+              image_spec* output_spec);
+
+
 } // namespace win
 } // namespace clip
 
