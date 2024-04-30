@@ -1,5 +1,5 @@
 // Clip Library
-// Copyright (C) 2015-2020  David Capello
+// Copyright (C) 2015-2024  David Capello
 //
 // This file is released under the terms of the MIT license.
 // Read LICENSE.txt for more information.
@@ -283,6 +283,46 @@ size_t lock::impl::get_data_length(format f) const {
 
   return len;
 }
+
+#if CLIP_ENABLE_LIST_FORMATS
+
+std::vector<format_info> lock::impl::list_formats() const {
+  static const char* standard_formats[CF_MAX] = {
+    "", "CF_TEXT", "CF_BITMAP", "CF_METAFILEPICT",
+    "CF_SYLK", "CF_DIF", "CF_TIFF", "CF_OEMTEXT",
+    "CF_DIB", "CF_PALETTE", "CF_PENDATA", "CF_RIFF",
+    "CF_WAVE", "CF_UNICODETEXT", "CF_ENHMETAFILE", "CF_HDROP",
+    "CF_LOCALE", "CF_DIBV5"
+  };
+
+  std::vector<format_info> formats;
+  std::vector<char> format_name(512);
+
+  formats.reserve(CountClipboardFormats());
+
+  UINT format_id = EnumClipboardFormats(0);
+  while (format_id != 0) {
+    if (format_id >= CF_TEXT && format_id < CF_MAX) {
+      // Standard clipboard format
+      formats.emplace_back(format_id, standard_formats[format_id]);
+    }
+    // Get user-defined format name
+    else {
+      int size = GetClipboardFormatNameA(
+        format_id,
+        format_name.data(),
+        format_name.size());
+
+      formats.emplace_back(format_id, std::string(format_name.data(), size));
+    }
+
+    format_id = EnumClipboardFormats(format_id);
+  }
+
+  return formats;
+}
+
+#endif // CLIP_ENABLE_LIST_FORMATS
 
 #if CLIP_ENABLE_IMAGE
 

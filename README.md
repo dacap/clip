@@ -59,6 +59,18 @@ int main() {
   - To be able to copy/paste on Linux you need `libx11-dev`/`libX11-devel` package.
   - To copy/paste images you will need `libpng-dev`/`libpng-devel` package.
 
+## Compilation Flags
+
+* `CLIP_ENABLE_IMAGE`: Enables the support to
+  [copy](examples/put_image.cpp)/[paste](examples/show_image.cpp) images.
+* `CLIP_ENABLE_LIST_FORMATS` (only for Windows): Enables the
+  `clip::lock::list_formats()` API function and the
+  [list_clip_formats](examples/list_clip_formats.cpp) example.
+* `CLIP_EXAMPLES`: Compile [examples](examples/).
+* `CLIP_TESTS`: Compile [tests](tests/).
+* `CLIP_X11_WITH_PNG` (only for Linux/X11): Enables support to
+  copy/paste images using the `libpng` library on Linux.
+
 ## Who is using this library?
 
 [Check the wiki](https://github.com/dacap/clip/wiki#who-is-using-clip)

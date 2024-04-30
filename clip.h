@@ -11,6 +11,7 @@
 #include <cassert>
 #include <memory>
 #include <string>
+#include <vector>
 
 namespace clip {
 
@@ -21,8 +22,22 @@ namespace clip {
   // Clipboard format identifier.
   typedef size_t format;
 
+#if CLIP_ENABLE_IMAGE
   class image;
   struct image_spec;
+#endif // CLIP_ENABLE_IMAGE
+
+#if CLIP_ENABLE_LIST_FORMATS
+  struct format_info {
+    format id = 0;
+    std::string name;
+    format_info(const format id,
+                const std::string& name)
+      : id(id),
+        name(name) {
+    }
+  };
+#endif // CLIP_ENABLE_LIST_FORMATS
 
   class lock {
   public:
@@ -57,6 +72,12 @@ namespace clip {
     bool get_image(image& image) const;
     bool get_image_spec(image_spec& spec) const;
 #endif // CLIP_ENABLE_IMAGE
+
+#if CLIP_ENABLE_LIST_FORMATS
+    // Returns the list of available formats (by name) in the
+    // clipboard.
+    std::vector<format_info> list_formats() const;
+#endif // CLIP_ENABLE_LIST_FORMATS
 
   private:
     class impl;

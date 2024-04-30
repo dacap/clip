@@ -1,5 +1,5 @@
 // Clip Library
-// Copyright (c) 2015-2018 David Capello
+// Copyright (c) 2015-2024 David Capello
 //
 // This file is released under the terms of the MIT license.
 // Read LICENSE.txt for more information.
@@ -71,6 +71,14 @@ bool lock::get_image_spec(image_spec& spec) const {
 }
 
 #endif // CLIP_ENABLE_IMAGE
+
+#if CLIP_ENABLE_LIST_FORMATS
+
+std::vector<format_info> lock::list_formats() const {
+  return p->list_formats();
+}
+
+#endif // CLIP_ENABLE_LIST_FORMATS
 
 format empty_format() { return 0; }
 format text_format()  { return 1; }
