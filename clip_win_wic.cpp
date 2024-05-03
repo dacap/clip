@@ -417,7 +417,7 @@ bool read_bmp(const uint8_t* buf,
               image* output_image,
               image_spec* output_spec)
 {
-  return decode({ CLSID_WICBmpDecoder }, buf, len, output_image, output_spec);
+  return decode({CLSID_WICBmpDecoder}, buf, len, output_image, output_spec);
 }
 
 } // namespace win
