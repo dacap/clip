@@ -360,7 +360,7 @@ bool decode(std::vector<GUID> decoderCLSIDs,
       for (int y = 0; y < spec.height; ++y) {
         char* dst_x = dst;
         for (int x = 0; x < spec.width; ++x, dst_x+=spec.bits_per_pixel/8, ++src) {
-          *((uint32_t*)dst_x) = colors[*src];
+          *((uint32_t*)dst_x) = (*src < numcolors ? colors[*src] : 0);
         }
         dst += spec.bytes_per_row;
       }
