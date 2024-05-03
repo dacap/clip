@@ -215,6 +215,11 @@ image_spec spec_from_pixelformat(const WICPixelFormatGUID& pixelFormat, unsigned
     spec.green_shift = 8;
     spec.blue_shift = 0;
     spec.alpha_shift = 24;
+    // Reset mask and shift for BGR pixel format.
+    if (pixelFormat == GUID_WICPixelFormat32bppBGR) {
+      spec.alpha_mask = 0;
+      spec.alpha_shift = 0;
+    }
   }
   else if (pixelFormat == GUID_WICPixelFormat24bppBGR ||
            pixelFormat == GUID_WICPixelFormat8bppIndexed) {
