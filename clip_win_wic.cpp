@@ -17,6 +17,8 @@
 namespace clip {
 namespace win {
 
+namespace {
+
 // Successful calls to CoInitialize() (S_OK or S_FALSE) must match
 // the calls to CoUninitialize().
 // From: https://docs.microsoft.com/en-us/windows/win32/api/combaseapi/nf-combaseapi-couninitialize#remarks
@@ -72,6 +74,48 @@ private:
   HMODULE m_ptr = nullptr;
 };
 #endif
+
+struct WicImageFormat {
+  const char* names[3];        // Alternative names of this format
+  UINT ids[3];                 // Clipboard format ID for each name of this format
+  ReadWicImageFormatFunc read; // Function used to decode data in this format
+};
+
+WicImageFormat wic_image_formats[] = {
+  { { "PNG", "image/png",  nullptr }, { 0, 0, 0 }, read_png },
+  { { "JPG", "image/jpeg", "JPEG"  }, { 0, 0, 0 }, read_jpg },
+  { { "BMP", "image/bmp",  nullptr }, { 0, 0, 0 }, read_bmp },
+  { { "GIF", "image/gif",  nullptr }, { 0, 0, 0 }, read_gif }
+};
+
+} // anonymous namespace
+
+ReadWicImageFormatFunc wic_image_format_available(UINT* output_cbformat) {
+  for (auto& fmt : wic_image_formats) {
+    for (int i=0; i<3; ++i) {
+      const char* name = fmt.names[i];
+      if (!name)
+        break;
+
+      // Although RegisterClipboardFormatA() already returns the same
+      // value for the same "name" (even for different apps), we
+      // prefer to cache the value to avoid calling
+      // RegisterClipboardFormatA() several times (as internally that
+      // function must do some kind of hash map name -> ID
+      // conversion).
+      UINT cbformat = fmt.ids[i];
+      if (cbformat == 0)
+        fmt.ids[i] = cbformat = RegisterClipboardFormatA(name);
+
+      if (cbformat && IsClipboardFormatAvailable(cbformat)) {
+        if (output_cbformat)
+          *output_cbformat = cbformat;
+        return fmt.read;
+      }
+    }
+  }
+  return nullptr;
+}
 
 //////////////////////////////////////////////////////////////////////
 // Encode the image as PNG format

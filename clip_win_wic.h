@@ -23,6 +23,13 @@ struct image_spec;
 
 namespace win {
 
+typedef bool (*ReadWicImageFormatFunc)(const uint8_t*,
+                                       const UINT,
+                                       clip::image*,
+                                       clip::image_spec*);
+
+ReadWicImageFormatFunc wic_image_format_available(UINT* output_cbformat);
+
 //////////////////////////////////////////////////////////////////////
 // Encode the image as PNG format
 

@@ -12,9 +12,6 @@
 #include <algorithm>
 #include <cstdlib>
 #include <cstring>
-#if CLIP_ENABLE_IMAGE
-#include <functional>
-#endif
 #include <string>
 #include <vector>
 
@@ -56,7 +53,6 @@ private:
   HGLOBAL m_handle;
 };
 
-
 // From: https://issues.chromium.org/issues/40080988#comment8
 //
 //  "Adds impersonation of the anonymous token around calls to the
@@ -82,84 +78,7 @@ private:
   const bool m_must_revert;
 };
 
-#if CLIP_ENABLE_IMAGE
-class ImageFormat {
-  using ReadDataFunc = std::function<bool(const uint8_t*,
-                                          const UINT,
-                                          clip::image* output_image,
-                                          clip::image_spec* output_spec)>;
-
-public:
-  static bool anyAvailable() {
-    for (auto fmt : m_formats) {
-      if (fmt->isAvailable()) {
-        return true;
-      }
-    }
-    return false;
-  }
-
-  // Returns all the formats that were succesfuly registered
-  static const std::vector<ImageFormat*>& formats() {
-    return m_formats;
-  }
-
-  ImageFormat(const std::vector<std::string>& names,
-              ReadDataFunc func) : m_readFunc(func)
-  {
-    for (auto& name : names) {
-      UINT cbformat = RegisterClipboardFormatA(name.c_str());
-      if (cbformat) {
-        m_names.push_back(name);
-        m_ids.push_back(cbformat);
-      }
-    }
-    // Add this format only if we were able to get a valid clipboard format id for it.
-    if (!m_ids.empty())
-      m_formats.push_back(this);
-  }
-
-  // Checks if this format is currently available on the clipboard, in which case
-  // returns true and sets *out_format (if it is not null) to the id of the
-  // available clipboard format. Returns false otherwise.
-  bool isAvailable(UINT* out_format = nullptr)
-  {
-    for (auto id : m_ids) {
-      if (IsClipboardFormatAvailable(id)) {
-        if (out_format)
-          *out_format = id;
-        return true;
-      }
-    }
-    return false;
-  }
-
-  bool read(const uint8_t* buf,
-            const UINT len,
-            image* output_image,
-            image_spec* output_spec)
-  {
-    return m_readFunc(buf, len, output_image, output_spec);
-  }
-
-private:
-  static std::vector<ImageFormat*> m_formats; // Holds all the supported formats.
-
-  std::vector<std::string> m_names; // Alternative names of this format
-  std::vector<UINT> m_ids;          // Clipboard format ID for each name of this format
-  ReadDataFunc m_readFunc;          // Function used to decode data in this format
-};
-
-std::vector<ImageFormat*> ImageFormat::m_formats;
-
-ImageFormat Png = { { "PNG", "image/png" }         , win::read_png };
-ImageFormat Jpg = { { "JPG", "image/jpeg", "JPEG" }, win::read_jpg };
-ImageFormat Bmp = { { "BMP", "image/bmp" }         , win::read_bmp };
-ImageFormat Gif = { { "GIF", "image/gif" }         , win::read_gif };
-
-#endif
-
-}
+} // anonymous namespace
 
 lock::impl::impl(void* hwnd) : m_locked(false) {
   for (int i=0; i<5; ++i) {
@@ -198,7 +117,7 @@ bool lock::impl::is_convertible(format f) const {
 #if CLIP_ENABLE_IMAGE
   else if (f == image_format()) {
     return (IsClipboardFormatAvailable(CF_DIB) ||
-            ImageFormat::anyAvailable());
+            win::wic_image_format_available(nullptr) != nullptr);
   }
 #endif // CLIP_ENABLE_IMAGE
   else
@@ -390,41 +309,37 @@ bool lock::impl::set_image(const image& image) {
 }
 
 bool lock::impl::get_image(image& output_img) const {
-  // Tries to get the first "custom" ("PNG", "JPG", "GIF", etc) clipboard
-  // format.
-  for (auto fmt : ImageFormat::formats()) {
-    UINT cbformat;
-    if (fmt->isAvailable(&cbformat)) {
-      HANDLE handle = GetClipboardData(cbformat);
-      if (handle) {
-        size_t size = GlobalSize(handle);
-        uint8_t* data = (uint8_t*)GlobalLock(handle);
-        bool result = fmt->read(data, size, &output_img, nullptr);
-        GlobalUnlock(handle);
-        if (result)
-          return true;
-      }
+  // Tries to get the first image format that can be read using WIC
+  // ("PNG", "JPG", "GIF", etc).
+  UINT cbformat;
+  if (auto read_img = win::wic_image_format_available(&cbformat)) {
+    HANDLE handle = GetClipboardData(cbformat);
+    if (handle) {
+      size_t size = GlobalSize(handle);
+      uint8_t* data = (uint8_t*)GlobalLock(handle);
+      bool result = read_img(data, size, &output_img, nullptr);
+      GlobalUnlock(handle);
+      if (result)
+        return true;
     }
   }
 
-  // If we couldn't find any "custom" format, we try to use the regular DIB format)
+  // If we couldn't find any, we try to use the regular DIB format.
   win::BitmapInfo bi;
   return bi.to_image(output_img);
 }
 
 bool lock::impl::get_image_spec(image_spec& spec) const {
-  for (auto fmt : ImageFormat::formats()) {
-    UINT cbformat;
-    if (fmt->isAvailable(&cbformat)) {
-      HANDLE handle = GetClipboardData(cbformat);
-      if (handle) {
-        size_t size = GlobalSize(handle);
-        uint8_t* data = (uint8_t*)GlobalLock(handle);
-        bool result = fmt->read(data, size, nullptr, &spec);
-        GlobalUnlock(handle);
-        if (result)
-          return true;
-      }
+  UINT cbformat;
+  if (auto read_img = win::wic_image_format_available(&cbformat)) {
+    HANDLE handle = GetClipboardData(cbformat);
+    if (handle) {
+      size_t size = GlobalSize(handle);
+      uint8_t* data = (uint8_t*)GlobalLock(handle);
+      bool result = read_img(data, size, nullptr, &spec);
+      GlobalUnlock(handle);
+      if (result)
+        return true;
     }
   }
 
