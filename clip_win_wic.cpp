@@ -237,32 +237,28 @@ image_spec spec_from_pixelformat(const WICPixelFormatGUID& pixelFormat, unsigned
   return spec;
 }
 
-// Tries to decode the input buf of size len using the first decoder available from the
-// ones specified in decoderCLSIDs vector. If output_image is not null, the decoded
-// image is returned there, if output_spec is not null then the image specifications
-// are set there.
-bool decode(std::vector<GUID> decoderCLSIDs,
+// Tries to decode the input buf of size len using the specified
+// decoders. If output_image is not null, the decoded image is
+// returned there, if output_spec is not null then the image
+// specifications are set there.
+bool decode(const GUID decoder_clsid1,
+            const GUID decoder_clsid2,
             const uint8_t* buf,
             const UINT len,
             image* output_image,
             image_spec* output_spec)
 {
-  if (decoderCLSIDs.empty())
-    return false;
-
   coinit com;
 
   comptr<IWICBitmapDecoder> decoder;
-
-  HRESULT hr = E_FAIL;
-  for (GUID decoderCLSID : decoderCLSIDs) {
-    hr = CoCreateInstance(decoderCLSID, nullptr,
+  HRESULT hr = CoCreateInstance(decoder_clsid1, nullptr,
+                                CLSCTX_INPROC_SERVER,
+                                IID_PPV_ARGS(&decoder));
+  if (FAILED(hr) && decoder_clsid2 != GUID_NULL) {
+    hr = CoCreateInstance(decoder_clsid2, nullptr,
                           CLSCTX_INPROC_SERVER,
                           IID_PPV_ARGS(&decoder));
-    if (SUCCEEDED(hr))
-      break;
   }
-
   if (FAILED(hr))
     return false;
 
@@ -272,7 +268,6 @@ bool decode(std::vector<GUID> decoderCLSIDs,
     return false;
 
   comptr<IStream> stream(create_stream(buf, len));
-
   if (!stream)
     return false;
 
@@ -389,7 +384,8 @@ bool read_png(const uint8_t* buf,
               const UINT len,
               image* output_image,
               image_spec* output_spec) {
-  return decode({CLSID_WICPngDecoder2, CLSID_WICPngDecoder1}, buf, len, output_image, output_spec);
+  return decode(CLSID_WICPngDecoder2, CLSID_WICPngDecoder1,
+                buf, len, output_image, output_spec);
 }
 
 //////////////////////////////////////////////////////////////////////
@@ -400,7 +396,8 @@ bool read_jpg(const uint8_t* buf,
               image* output_image,
               image_spec* output_spec)
 {
-  return decode({CLSID_WICJpegDecoder}, buf, len, output_image, output_spec);
+  return decode(CLSID_WICJpegDecoder, GUID_NULL,
+                buf, len, output_image, output_spec);
 }
 
 //////////////////////////////////////////////////////////////////////
@@ -411,7 +408,8 @@ bool read_gif(const uint8_t* buf,
               image* output_image,
               image_spec* output_spec)
 {
-  return decode({CLSID_WICGifDecoder}, buf, len, output_image, output_spec);
+  return decode(CLSID_WICGifDecoder, GUID_NULL,
+                buf, len, output_image, output_spec);
 }
 
 //////////////////////////////////////////////////////////////////////
@@ -422,7 +420,8 @@ bool read_bmp(const uint8_t* buf,
               image* output_image,
               image_spec* output_spec)
 {
-  return decode({CLSID_WICBmpDecoder}, buf, len, output_image, output_spec);
+  return decode(CLSID_WICBmpDecoder, GUID_NULL,
+                buf, len, output_image, output_spec);
 }
 
 } // namespace win
