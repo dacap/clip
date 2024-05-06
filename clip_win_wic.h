@@ -23,6 +23,13 @@ struct image_spec;
 
 namespace win {
 
+typedef bool (*ReadWicImageFormatFunc)(const uint8_t*,
+                                       const UINT,
+                                       clip::image*,
+                                       clip::image_spec*);
+
+ReadWicImageFormatFunc wic_image_format_available(UINT* output_cbformat);
+
 //////////////////////////////////////////////////////////////////////
 // Encode the image as PNG format
 
@@ -37,6 +44,31 @@ bool read_png(const uint8_t* buf,
               const UINT len,
               image* output_image,
               image_spec* output_spec);
+
+//////////////////////////////////////////////////////////////////////
+// Decode the clipboard data from JPEG format
+
+bool read_jpg(const uint8_t* buf,
+              const UINT len,
+              image* output_image,
+              image_spec* output_spec);
+
+//////////////////////////////////////////////////////////////////////
+// Decode the clipboard data from GIF format
+
+bool read_gif(const uint8_t* buf,
+              const UINT len,
+              image* output_image,
+              image_spec* output_spec);
+
+//////////////////////////////////////////////////////////////////////
+// Decode the clipboard data from BMP format
+
+bool read_bmp(const uint8_t* buf,
+              const UINT len,
+              image* output_image,
+              image_spec* output_spec);
+
 
 } // namespace win
 } // namespace clip

@@ -17,6 +17,8 @@
 namespace clip {
 namespace win {
 
+namespace {
+
 // Successful calls to CoInitialize() (S_OK or S_FALSE) must match
 // the calls to CoUninitialize().
 // From: https://docs.microsoft.com/en-us/windows/win32/api/combaseapi/nf-combaseapi-couninitialize#remarks
@@ -72,6 +74,48 @@ private:
   HMODULE m_ptr = nullptr;
 };
 #endif
+
+struct WicImageFormat {
+  const char* names[3];        // Alternative names of this format
+  UINT ids[3];                 // Clipboard format ID for each name of this format
+  ReadWicImageFormatFunc read; // Function used to decode data in this format
+};
+
+WicImageFormat wic_image_formats[] = {
+  { { "PNG", "image/png",  nullptr }, { 0, 0, 0 }, read_png },
+  { { "JPG", "image/jpeg", "JPEG"  }, { 0, 0, 0 }, read_jpg },
+  { { "BMP", "image/bmp",  nullptr }, { 0, 0, 0 }, read_bmp },
+  { { "GIF", "image/gif",  nullptr }, { 0, 0, 0 }, read_gif }
+};
+
+} // anonymous namespace
+
+ReadWicImageFormatFunc wic_image_format_available(UINT* output_cbformat) {
+  for (auto& fmt : wic_image_formats) {
+    for (int i=0; i<3; ++i) {
+      const char* name = fmt.names[i];
+      if (!name)
+        break;
+
+      // Although RegisterClipboardFormatA() already returns the same
+      // value for the same "name" (even for different apps), we
+      // prefer to cache the value to avoid calling
+      // RegisterClipboardFormatA() several times (as internally that
+      // function must do some kind of hash map name -> ID
+      // conversion).
+      UINT cbformat = fmt.ids[i];
+      if (cbformat == 0)
+        fmt.ids[i] = cbformat = RegisterClipboardFormatA(name);
+
+      if (cbformat && IsClipboardFormatAvailable(cbformat)) {
+        if (output_cbformat)
+          *output_cbformat = cbformat;
+        return fmt.read;
+      }
+    }
+  }
+  return nullptr;
+}
 
 //////////////////////////////////////////////////////////////////////
 // Encode the image as PNG format
@@ -178,51 +222,97 @@ HGLOBAL write_png(const image& image) {
   return nullptr;
 }
 
-//////////////////////////////////////////////////////////////////////
-// Decode the clipboard data from PNG format
-
-bool read_png(const uint8_t* buf,
-              const UINT len,
-              image* output_image,
-              image_spec* output_spec) {
-  coinit com;
-
+IStream* create_stream(const BYTE* pInit, UINT cbInit)
+{
 #ifdef CLIP_SUPPORT_WINXP
   // Pull SHCreateMemStream from shlwapi.dll by ordinal 12
   // for Windows XP support
   // From: https://learn.microsoft.com/en-us/windows/win32/api/shlwapi/nf-shlwapi-shcreatememstream#remarks
 
-  typedef IStream* (WINAPI* SHCreateMemStreamPtr)(const BYTE* pInit, UINT cbInit);
+  typedef IStream*(WINAPI * SHCreateMemStreamPtr)(const BYTE* pInit,
+                                                  UINT cbInit);
   hmodule shlwapiDll(L"shlwapi.dll");
   if (!shlwapiDll)
     return false;
 
-  auto SHCreateMemStream =
-    reinterpret_cast<SHCreateMemStreamPtr>(GetProcAddress(shlwapiDll, (LPCSTR)12));
+  auto SHCreateMemStream = reinterpret_cast<SHCreateMemStreamPtr>(
+    GetProcAddress(shlwapiDll, (LPCSTR)12));
   if (!SHCreateMemStream)
     return false;
 #endif
+  return SHCreateMemStream(pInit, cbInit);
+}
 
-  comptr<IStream> stream(SHCreateMemStream(buf, len));
+image_spec spec_from_pixelformat(const WICPixelFormatGUID& pixelFormat, unsigned long w, unsigned long h)
+{
+  image_spec spec;
+  spec.width = w;
+  spec.height = h;
+  if (pixelFormat == GUID_WICPixelFormat32bppBGRA ||
+      pixelFormat == GUID_WICPixelFormat32bppBGR) {
+    spec.bits_per_pixel = 32;
+    spec.red_mask = 0xff0000;
+    spec.green_mask = 0xff00;
+    spec.blue_mask = 0xff;
+    spec.alpha_mask = 0xff000000;
+    spec.red_shift = 16;
+    spec.green_shift = 8;
+    spec.blue_shift = 0;
+    spec.alpha_shift = 24;
+    // Reset mask and shift for BGR pixel format.
+    if (pixelFormat == GUID_WICPixelFormat32bppBGR) {
+      spec.alpha_mask = 0;
+      spec.alpha_shift = 0;
+    }
+  }
+  else if (pixelFormat == GUID_WICPixelFormat24bppBGR ||
+           pixelFormat == GUID_WICPixelFormat8bppIndexed) {
+    spec.bits_per_pixel = 24;
+    spec.red_mask = 0xff0000;
+    spec.green_mask = 0xff00;
+    spec.blue_mask = 0xff;
+    spec.alpha_mask = 0;
+    spec.red_shift = 16;
+    spec.green_shift = 8;
+    spec.blue_shift = 0;
+    spec.alpha_shift = 0;
+  }
+  spec.bytes_per_row = ((w*spec.bits_per_pixel+31) / 32) * 4;
+  return spec;
+}
 
-  if (!stream)
-    return false;
+// Tries to decode the input buf of size len using the specified
+// decoders. If output_image is not null, the decoded image is
+// returned there, if output_spec is not null then the image
+// specifications are set there.
+bool decode(const GUID decoder_clsid1,
+            const GUID decoder_clsid2,
+            const uint8_t* buf,
+            const UINT len,
+            image* output_image,
+            image_spec* output_spec)
+{
+  coinit com;
 
   comptr<IWICBitmapDecoder> decoder;
-  HRESULT hr = CoCreateInstance(CLSID_WICPngDecoder2,
-                                nullptr, CLSCTX_INPROC_SERVER,
+  HRESULT hr = CoCreateInstance(decoder_clsid1, nullptr,
+                                CLSCTX_INPROC_SERVER,
                                 IID_PPV_ARGS(&decoder));
-  if (FAILED(hr)) {
-    hr = CoCreateInstance(CLSID_WICPngDecoder1,
-                          nullptr, CLSCTX_INPROC_SERVER,
+  if (FAILED(hr) && decoder_clsid2 != GUID_NULL) {
+    hr = CoCreateInstance(decoder_clsid2, nullptr,
+                          CLSCTX_INPROC_SERVER,
                           IID_PPV_ARGS(&decoder));
-    if (FAILED(hr))
-      return false;
   }
+  if (FAILED(hr))
+    return false;
 
   // Can decoder be nullptr if hr is S_OK/successful? We've received
   // some crash reports that might indicate this.
   if (!decoder)
+    return false;
+
+  comptr<IStream> stream(create_stream(buf, len));
+  if (!stream)
     return false;
 
   hr = decoder->Initialize(stream.get(), WICDecodeMetadataCacheOnDemand);
@@ -239,9 +329,12 @@ bool read_png(const uint8_t* buf,
   if (FAILED(hr))
     return false;
 
-  // Only support this pixel format
+  // Only support these pixel formats
   // TODO add support for more pixel formats
-  if (pixelFormat != GUID_WICPixelFormat32bppBGRA)
+  if (pixelFormat != GUID_WICPixelFormat32bppBGRA &&
+      pixelFormat != GUID_WICPixelFormat32bppBGR &&
+      pixelFormat != GUID_WICPixelFormat24bppBGR &&
+      pixelFormat != GUID_WICPixelFormat8bppIndexed)
     return false;
 
   UINT width = 0, height = 0;
@@ -249,39 +342,130 @@ bool read_png(const uint8_t* buf,
   if (FAILED(hr))
     return false;
 
-  image_spec spec;
-  spec.width = width;
-  spec.height = height;
-  spec.bits_per_pixel = 32;
-  spec.bytes_per_row = 4 * width;
-  spec.red_mask    = 0xff0000;
-  spec.green_mask  = 0xff00;
-  spec.blue_mask   = 0xff;
-  spec.alpha_mask  = 0xff000000;
-  spec.red_shift   = 16;
-  spec.green_shift = 8;
-  spec.blue_shift  = 0;
-  spec.alpha_shift = 24;
+  image_spec spec = spec_from_pixelformat(pixelFormat, width, height);
 
   if (output_spec)
     *output_spec = spec;
 
+  image img;
   if (output_image) {
-    image img(spec);
+    if (pixelFormat == GUID_WICPixelFormat8bppIndexed) {
+      std::vector<BYTE> pixels(spec.width * spec.height);
+      hr = frame->CopyPixels(nullptr,  // Entire bitmap
+                             spec.width,
+                             spec.width * spec.height,
+                             pixels.data());
 
-    hr = frame->CopyPixels(
-      nullptr, // Entire bitmap
-      spec.bytes_per_row,
-      spec.bytes_per_row * spec.height,
-      (BYTE*)img.data());
-    if (FAILED(hr)) {
-      return false;
+      if (FAILED(hr))
+        return false;
+
+      comptr<IWICImagingFactory> factory;
+      HRESULT hr = CoCreateInstance(CLSID_WICImagingFactory,
+                                    nullptr,
+                                    CLSCTX_INPROC_SERVER,
+                                    IID_PPV_ARGS(&factory));
+      if (FAILED(hr))
+        return false;
+
+      comptr<IWICPalette> palette;
+      hr = factory->CreatePalette(&palette);
+      if (FAILED(hr))
+        return false;
+
+      hr = frame->CopyPalette(palette.get());
+      if (FAILED(hr))
+        return false;
+
+      UINT numcolors;
+      hr = palette->GetColorCount(&numcolors);
+      if (FAILED(hr))
+        return false;
+
+      UINT actualNumcolors;
+      std::vector<WICColor> colors(numcolors);
+      hr = palette->GetColors(numcolors, colors.data(), &actualNumcolors);
+      if (FAILED(hr))
+        return false;
+
+      BOOL hasAlpha = false;
+      palette->HasAlpha(&hasAlpha);
+      if (hasAlpha) {
+        spec = spec_from_pixelformat(GUID_WICPixelFormat32bppBGRA, width, height);
+      }
+
+      img = image(spec);
+      char* dst = img.data();
+      BYTE* src = pixels.data();
+      for (int y = 0; y < spec.height; ++y) {
+        char* dst_x = dst;
+        for (int x = 0; x < spec.width; ++x, dst_x+=spec.bits_per_pixel/8, ++src) {
+          *((uint32_t*)dst_x) = (*src < numcolors ? colors[*src] : 0);
+        }
+        dst += spec.bytes_per_row;
+      }
     }
+    else {
+      img = image(spec);
+      hr = frame->CopyPixels(nullptr,  // Entire bitmap
+                             spec.bytes_per_row,
+                             spec.bytes_per_row * spec.height,
+                             (BYTE*)img.data());
+      if (FAILED(hr))
+        return false;
+    }
+
 
     std::swap(*output_image, img);
   }
 
   return true;
+}
+
+//////////////////////////////////////////////////////////////////////
+// Decode the clipboard data from PNG format
+
+bool read_png(const uint8_t* buf,
+              const UINT len,
+              image* output_image,
+              image_spec* output_spec) {
+  return decode(CLSID_WICPngDecoder2, CLSID_WICPngDecoder1,
+                buf, len, output_image, output_spec);
+}
+
+//////////////////////////////////////////////////////////////////////
+// Decode the clipboard data from JPEG format
+
+bool read_jpg(const uint8_t* buf,
+              const UINT len,
+              image* output_image,
+              image_spec* output_spec)
+{
+  return decode(CLSID_WICJpegDecoder, GUID_NULL,
+                buf, len, output_image, output_spec);
+}
+
+//////////////////////////////////////////////////////////////////////
+// Decode the clipboard data from GIF format
+
+bool read_gif(const uint8_t* buf,
+              const UINT len,
+              image* output_image,
+              image_spec* output_spec)
+{
+  return decode(CLSID_WICGifDecoder, GUID_NULL,
+                buf, len, output_image, output_spec);
+}
+
+//////////////////////////////////////////////////////////////////////
+// Decode the clipboard data from BMP format
+
+bool read_bmp(const uint8_t* buf,
+              const UINT len,
+              image* output_image,
+              image_spec* output_spec)
+{
+  return decode(CLSID_WICBmpDecoder, GUID_NULL,
+                buf, len, output_image, output_spec);
 }
 
 } // namespace win

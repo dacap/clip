@@ -53,7 +53,6 @@ private:
   HGLOBAL m_handle;
 };
 
-
 // From: https://issues.chromium.org/issues/40080988#comment8
 //
 //  "Adds impersonation of the anonymous token around calls to the
@@ -79,7 +78,7 @@ private:
   const bool m_must_revert;
 };
 
-}
+} // anonymous namespace
 
 lock::impl::impl(void* hwnd) : m_locked(false) {
   for (int i=0; i<5; ++i) {
@@ -117,13 +116,12 @@ bool lock::impl::is_convertible(format f) const {
   }
 #if CLIP_ENABLE_IMAGE
   else if (f == image_format()) {
-    return (IsClipboardFormatAvailable(CF_DIB) ? true: false);
+    return (IsClipboardFormatAvailable(CF_DIB) ||
+            win::wic_image_format_available(nullptr) != nullptr);
   }
 #endif // CLIP_ENABLE_IMAGE
-  else if (IsClipboardFormatAvailable(f))
-    return true;
   else
-    return false;
+    return IsClipboardFormatAvailable(f);
 }
 
 bool lock::impl::set_data(format f, const char* buf, size_t len) {
@@ -351,35 +349,35 @@ bool lock::impl::set_image(const image& image) {
 }
 
 bool lock::impl::get_image(image& output_img) const {
-  // Get the "PNG" clipboard format (this is useful only for 32bpp
-  // images with alpha channel, in other case we can use the regular
-  // DIB format)
-  UINT png_format = RegisterClipboardFormatA("PNG");
-  if (png_format && IsClipboardFormatAvailable(png_format)) {
-    HANDLE png_handle = GetClipboardData(png_format);
-    if (png_handle) {
-      size_t png_size = GlobalSize(png_handle);
-      uint8_t* png_data = (uint8_t*)GlobalLock(png_handle);
-      bool result = win::read_png(png_data, png_size, &output_img, nullptr);
-      GlobalUnlock(png_handle);
+  // Tries to get the first image format that can be read using WIC
+  // ("PNG", "JPG", "GIF", etc).
+  UINT cbformat;
+  if (auto read_img = win::wic_image_format_available(&cbformat)) {
+    HANDLE handle = GetClipboardData(cbformat);
+    if (handle) {
+      size_t size = GlobalSize(handle);
+      uint8_t* data = (uint8_t*)GlobalLock(handle);
+      bool result = read_img(data, size, &output_img, nullptr);
+      GlobalUnlock(handle);
       if (result)
         return true;
     }
   }
 
+  // If we couldn't find any, we try to use the regular DIB format.
   win::BitmapInfo bi;
   return bi.to_image(output_img);
 }
 
 bool lock::impl::get_image_spec(image_spec& spec) const {
-  UINT png_format = RegisterClipboardFormatA("PNG");
-  if (png_format && IsClipboardFormatAvailable(png_format)) {
-    HANDLE png_handle = GetClipboardData(png_format);
-    if (png_handle) {
-      size_t png_size = GlobalSize(png_handle);
-      uint8_t* png_data = (uint8_t*)GlobalLock(png_handle);
-      bool result = win::read_png(png_data, png_size, nullptr, &spec);
-      GlobalUnlock(png_handle);
+  UINT cbformat;
+  if (auto read_img = win::wic_image_format_available(&cbformat)) {
+    HANDLE handle = GetClipboardData(cbformat);
+    if (handle) {
+      size_t size = GlobalSize(handle);
+      uint8_t* data = (uint8_t*)GlobalLock(handle);
+      bool result = read_img(data, size, nullptr, &spec);
+      GlobalUnlock(handle);
       if (result)
         return true;
     }
