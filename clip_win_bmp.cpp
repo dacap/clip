@@ -84,8 +84,9 @@ bool BitmapInfo::load_from(BITMAPINFO* bi) {
     blue_mask  = *((uint32_t*)&bi->bmiColors[2]);
     if (bit_count == 32)
       alpha_mask = 0xff000000;
+    return true;
   }
-  else if (compression == BI_RGB) {
+  if (compression == BI_RGB) {
     switch (bit_count) {
       case 32:
         red_mask   = 0xff0000;
@@ -105,7 +106,9 @@ bool BitmapInfo::load_from(BITMAPINFO* bi) {
         blue_mask  = 0x001f;
         break;
     }
+    return true;
   }
+  return false;
 }
 
 BitmapInfo::BitmapInfo(BITMAPV5HEADER* pb5) {
