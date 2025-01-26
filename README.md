@@ -39,11 +39,12 @@ int main() {
     clip::register_format("com.appname.FormatName");
 
   int value = 32;
+  std::string str = "Alternative text for value 32";
 
   clip::lock l;
   l.clear();
-  l.set_data(clip::text_format(), "Alternative text for value 32");
-  l.set_data(my_format, &value, sizeof(int));
+  l.set_data(clip::text_format(), str.c_str(), str.size());
+  l.set_data(my_format, (const char*)&value, sizeof(int));
 }
 ```
 
