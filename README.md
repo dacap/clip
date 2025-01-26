@@ -54,7 +54,7 @@ int main() {
   change depending on the platform (e.g. `size_t`) in your custom
   format data.
 * **Windows**:
-  - [Limited number of clipboard formats on Windows](http://blogs.msdn.com/b/oldnewthing/archive/2015/03/19/10601208.aspx)
+  - [Limited number of clipboard formats on Windows](https://web.archive.org/web/20250126161802/https://devblogs.microsoft.com/oldnewthing/20080430-00/?p=22523)
 * **Linux**:
   - To be able to copy/paste on Linux you need `libx11-dev`/`libX11-devel` package.
   - To copy/paste images you will need `libpng-dev`/`libpng-devel` package.
