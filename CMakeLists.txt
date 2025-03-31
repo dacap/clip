@@ -124,4 +124,16 @@ if(CLIP_INSTALL)
     NAMESPACE clip::
     DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/clip
   )
+
+  include(CMakePackageConfigHelpers)
+
+  configure_package_config_file(
+    clip-config.cmake.in
+    ${CMAKE_CURRENT_BINARY_DIR}/clip-config.cmake
+    INSTALL_DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/clip
+  )
+  install(
+    FILES ${CMAKE_CURRENT_BINARY_DIR}/clip-config.cmake
+    DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/clip
+  )
 endif()
