@@ -20,6 +20,7 @@ if(WIN32)
 endif()
 option(CLIP_EXAMPLES "Compile clip examples" on)
 option(CLIP_TESTS "Compile clip tests" on)
+option(CLIP_INSTALL "Enable clip installation" on)
 if(UNIX AND NOT APPLE)
   option(CLIP_X11_WITH_PNG "Compile with libpng to support copy/paste image in png format" on)
 endif()
@@ -103,4 +104,24 @@ endif()
 if(CLIP_TESTS)
   enable_testing()
   add_subdirectory(tests)
+endif()
+
+if(CLIP_INSTALL)
+  include(GNUInstallDirs)
+
+  install(
+    FILES clip.h
+    DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
+  )
+  install(
+    TARGETS clip
+    EXPORT clip-targets
+    LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
+    ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
+  )
+  install(
+    EXPORT clip-targets
+    NAMESPACE clip::
+    DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/clip
+  )
 endif()
