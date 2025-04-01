@@ -69,6 +69,7 @@ int main() {
   [list_clip_formats](examples/list_clip_formats.cpp) example.
 * `CLIP_EXAMPLES`: Compile [examples](examples/).
 * `CLIP_TESTS`: Compile [tests](tests/).
+* `CLIP_INSTALL`: Generate installation rules for CMake.
 * `CLIP_X11_WITH_PNG` (only for Linux/X11): Enables support to
   copy/paste images using the `libpng` library on Linux.
 
