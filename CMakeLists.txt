@@ -1,7 +1,7 @@
 # Clip Library
-# Copyright (c) 2015-2024 David Capello
+# Copyright (c) 2015-2025 David Capello
 
-cmake_minimum_required(VERSION 3.5)
+cmake_minimum_required(VERSION 3.15)
 
 project(clip LANGUAGES CXX)
 
