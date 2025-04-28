@@ -10,6 +10,7 @@
 #include "clip_lock_impl.h"
 
 #include <algorithm>
+#include <cstdint>
 #include <cstdlib>
 #include <cstring>
 #include <string>

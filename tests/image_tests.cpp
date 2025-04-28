@@ -8,6 +8,7 @@
 
 #include "clip.h"
 
+#include <cstdint>
 #include <cstring>
 
 using namespace clip;

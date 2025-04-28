@@ -2,6 +2,7 @@
 // Copyright (c) 2016 David Capello
 
 #include "clip.h"
+#include <cstdint>
 #include <iostream>
 
 int main() {
