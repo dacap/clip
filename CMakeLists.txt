@@ -69,7 +69,7 @@ elseif(APPLE)
 
   target_sources(clip PRIVATE clip_osx.mm)
   target_link_libraries(clip ${COCOA_LIBRARY})
-elseif(UNIX)
+elseif(UNIX AND NOT EMSCRIPTEN)
   include(CheckIncludeFiles)
   check_include_files(xcb/xcb.h HAVE_XCB_XLIB_H)
 
