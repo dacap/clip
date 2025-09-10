@@ -196,12 +196,21 @@ bool BitmapInfo::to_image(image& output_img) const {
       }
 
       if (src) {
-        const int src_bytes_per_row = spec.width*((bit_count+7)/8);
-        const int padding = (4-(src_bytes_per_row&3))&3;
+        const int src_bytes_per_row = spec.width * ((bit_count + 7) / 8);
+        const int padding = (4 - (src_bytes_per_row & 3)) & 3;
 
-        for (long y=spec.height-1; y>=0; --y, src+=src_bytes_per_row+padding) {
-          char* dst = img.data()+y*spec.bytes_per_row;
-          std::copy(src, src+src_bytes_per_row, dst);
+        int direction = -1;
+        int topY = spec.height - 1;
+        // If the DIB is a top-down bitmap, then we must reverse the reading.
+        if ((bi && bi->bmiHeader.biHeight < 0) ||
+            (b5 && b5->bV5Height < 0)) {
+          topY = 0;
+          direction = 1;
+        }
+
+        for (long y = 0; y < spec.height; ++y, src += src_bytes_per_row + padding) {
+          char* dst = img.data() + (topY + direction * y) * spec.bytes_per_row;
+          std::copy(src, src + src_bytes_per_row, dst);
         }
       }
 
