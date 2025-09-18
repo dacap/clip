@@ -196,6 +196,15 @@ bool BitmapInfo::to_image(image& output_img) const {
   fill_spec(spec);
   image img(spec);
 
+  int direction = -1;
+  int topY = spec.height - 1;
+  // If the DIB is a top-down bitmap, then we must reverse the writing.
+  if ((b5 && b5->bV5Height < 0) ||
+      (bi && bi->bmiHeader.biHeight < 0)) {
+    topY = 0;
+    direction = 1;
+  }
+
   switch (bit_count) {
 
     case 32:
@@ -214,15 +223,6 @@ bool BitmapInfo::to_image(image& output_img) const {
       }
 
       if (src) {
-        int direction = -1;
-        int topY = spec.height - 1;
-        // If the DIB is a top-down bitmap, then we must reverse the reading.
-        if ((bi && bi->bmiHeader.biHeight < 0) ||
-            (b5 && b5->bV5Height < 0)) {
-          topY = 0;
-          direction = 1;
-        }
-
         for (long y = 0; y < spec.height; ++y, src += stride) {
           char* dst = img.data() + (topY + direction * y) * spec.bytes_per_row;
           std::copy(src, src + stride, dst);
@@ -252,8 +252,8 @@ bool BitmapInfo::to_image(image& output_img) const {
       const uint8_t* src = (((uint8_t*)bi) + bi->bmiHeader.biSize + sizeof(RGBQUAD)*colors);
       const uint8_t* srcY = src;
 
-      for (long y=spec.height-1; y>=0; --y, srcY += stride, src = srcY) {
-        char* dst = img.data() + y*spec.bytes_per_row;
+      for (long y = 0; y < spec.height; ++y, srcY += stride, src = srcY) {
+        char* dst = img.data() + (topY + direction * y) * spec.bytes_per_row;
 
         for (unsigned long x=0; x<spec.width; ++x, ++src, dst+=3) {
           int idx = *src;
