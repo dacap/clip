@@ -1,5 +1,5 @@
 // Clip Library
-// Copyright (c) 2015-2024  David Capello
+// Copyright (c) 2015-2025  David Capello
 //
 // This file is released under the terms of the MIT license.
 // Read LICENSE.txt for more information.
@@ -9,6 +9,7 @@
 #include "clip.h"
 #include "clip_common.h"
 
+#include <algorithm>
 #include <vector>
 
 namespace clip {
@@ -41,6 +42,19 @@ BitmapInfo::BitmapInfo() {
   }
 }
 
+void BitmapInfo::calc_stride(uint32_t imageSize)
+{
+  // By default the minimum stride (bytes per row) should be always
+  // the image width in bytes, rounded up to the nearest DWORD. But
+  // some programs (e.g. Steam screenshots) create an unaligned stride
+  // (this is even incompatible with MSPaint, which cannot read the
+  // clipboard bitmap). Anyway, we can use bV5SizeImage/biSizeImage
+  // fields to determine if each stride is rounded to DWORDs or not.
+  stride = GDI_WIDTHBYTES(width * bit_count);
+  if (imageSize != stride * height)
+    stride = (width * bit_count) / 8;
+}
+
 bool BitmapInfo::load_from(BITMAPV5HEADER* b5) {
   if (b5 &&
       b5->bV5BitCount == 32 &&
@@ -52,6 +66,8 @@ bool BitmapInfo::load_from(BITMAPV5HEADER* b5) {
     height      = b5->bV5Height;
     bit_count   = b5->bV5BitCount;
     compression = b5->bV5Compression;
+    calc_stride(b5->bV5SizeImage);
+
     if (compression == BI_BITFIELDS) {
       red_mask    = b5->bV5RedMask;
       green_mask  = b5->bV5GreenMask;
@@ -77,6 +93,7 @@ bool BitmapInfo::load_from(BITMAPINFO* bi) {
   height      = bi->bmiHeader.biHeight;
   bit_count   = bi->bmiHeader.biBitCount;
   compression = bi->bmiHeader.biCompression;
+  calc_stride(bi->bmiHeader.biSizeImage);
 
   if (compression == BI_BITFIELDS) {
     red_mask   = *((uint32_t*)&bi->bmiColors[0]);
@@ -128,7 +145,7 @@ void BitmapInfo::fill_spec(image_spec& spec) const {
   spec.bits_per_pixel = bit_count;
   if (spec.bits_per_pixel <= 8)
     spec.bits_per_pixel = 24;
-  spec.bytes_per_row = width*((spec.bits_per_pixel+7)/8);
+  spec.bytes_per_row = width * ((spec.bits_per_pixel+7)/8);
   spec.red_mask   = red_mask;
   spec.green_mask = green_mask;
   spec.blue_mask  = blue_mask;
@@ -156,6 +173,7 @@ void BitmapInfo::fill_spec(image_spec& spec) const {
       break;
     }
   }
+  spec.bytes_per_row = std::max<unsigned long>(spec.bytes_per_row, stride);
 
   unsigned long* masks = &spec.red_mask;
   unsigned long* shifts = &spec.red_shift;
@@ -196,9 +214,6 @@ bool BitmapInfo::to_image(image& output_img) const {
       }
 
       if (src) {
-        const int src_bytes_per_row = spec.width * ((bit_count + 7) / 8);
-        const int padding = (4 - (src_bytes_per_row & 3)) & 3;
-
         int direction = -1;
         int topY = spec.height - 1;
         // If the DIB is a top-down bitmap, then we must reverse the reading.
@@ -208,9 +223,9 @@ bool BitmapInfo::to_image(image& output_img) const {
           direction = 1;
         }
 
-        for (long y = 0; y < spec.height; ++y, src += src_bytes_per_row + padding) {
+        for (long y = 0; y < spec.height; ++y, src += stride) {
           char* dst = img.data() + (topY + direction * y) * spec.bytes_per_row;
-          std::copy(src, src + src_bytes_per_row, dst);
+          std::copy(src, src + stride, dst);
         }
       }
 
@@ -235,10 +250,10 @@ bool BitmapInfo::to_image(image& output_img) const {
       }
 
       const uint8_t* src = (((uint8_t*)bi) + bi->bmiHeader.biSize + sizeof(RGBQUAD)*colors);
-      const int padding = (4-(spec.width&3))&3;
+      const uint8_t* srcY = src;
 
-      for (long y=spec.height-1; y>=0; --y, src+=padding) {
-        char* dst = img.data()+y*spec.bytes_per_row;
+      for (long y=spec.height-1; y>=0; --y, srcY += stride, src = srcY) {
+        char* dst = img.data() + y*spec.bytes_per_row;
 
         for (unsigned long x=0; x<spec.width; ++x, ++src, dst+=3) {
           int idx = *src;

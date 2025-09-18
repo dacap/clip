@@ -1,5 +1,5 @@
 // Clip Library
-// Copyright (c) 2015-2024  David Capello
+// Copyright (c) 2015-2025  David Capello
 //
 // This file is released under the terms of the MIT license.
 // Read LICENSE.txt for more information.
@@ -30,6 +30,7 @@ struct BitmapInfo {
   int height = 0;
   uint16_t bit_count = 0;
   uint32_t compression = 0;
+  uint32_t stride = 0;
   uint32_t red_mask = 0;
   uint32_t green_mask = 0;
   uint32_t blue_mask = 0;
@@ -51,6 +52,7 @@ struct BitmapInfo {
   bool to_image(image& output_img) const;
 
 private:
+  void calc_stride(uint32_t imageSize);
   bool load_from(BITMAPV5HEADER* b5);
   bool load_from(BITMAPINFO* bi);
 };
