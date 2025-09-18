@@ -32,7 +32,7 @@ if(CLIP_ENABLE_IMAGE)
   target_compile_definitions(clip PUBLIC -DCLIP_ENABLE_IMAGE=1)
 endif()
 
-if(CLIP_ENABLE_LIST_FORMATS)
+if(WIN32 AND CLIP_ENABLE_LIST_FORMATS)
   target_compile_definitions(clip PUBLIC -DCLIP_ENABLE_LIST_FORMATS=1)
 endif()
 
