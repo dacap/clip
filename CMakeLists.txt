@@ -27,6 +27,8 @@ endif()
 
 add_library(clip clip.cpp)
 
+target_include_directories(clip INTERFACE $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>)
+
 if(CLIP_ENABLE_IMAGE)
   target_sources(clip PRIVATE image.cpp)
   target_compile_definitions(clip PUBLIC -DCLIP_ENABLE_IMAGE=1)
