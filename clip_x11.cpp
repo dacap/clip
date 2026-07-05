@@ -6,8 +6,7 @@
 
 #include "clip.h"
 #include "clip_lock_impl.h"
-
-#include <xcb/xcb.h>
+#include "clip_xcb_functions.h"
 
 #include <atomic>
 #include <algorithm>
@@ -75,9 +74,11 @@ public:
 
   Manager()
     : m_lock(m_mutex, std::defer_lock)
-    , m_connection(xcb_connect(nullptr, nullptr))
     , m_window(0)
     , m_incr_process(false) {
+
+    clip_xcb_functions_initialize();
+    m_connection = clip_xcb_connect(nullptr, nullptr);
     if (!m_connection)
       return;
 
@@ -146,6 +147,8 @@ public:
 
     if (m_connection)
       xcb_disconnect(m_connection);
+
+    clip_xcb_functions_finalize();
   }
 
   bool try_lock() {
