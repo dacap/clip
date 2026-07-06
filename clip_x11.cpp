@@ -82,11 +82,11 @@ public:
     if (!m_connection)
       return;
 
-    const xcb_setup_t* setup = xcb_get_setup(m_connection);
+    const xcb_setup_t* setup = clip_xcb_get_setup(m_connection);
     if (!setup)
       return;
 
-    xcb_screen_t* screen = xcb_setup_roots_iterator(setup).data;
+    xcb_screen_t* screen = clip_xcb_setup_roots_iterator(setup).data;
     if (!screen)
       return;
 
@@ -97,8 +97,8 @@ public:
       // To receive DestroyNotify event and stop the message loop.
       XCB_EVENT_MASK_STRUCTURE_NOTIFY;
 
-    m_window = xcb_generate_id(m_connection);
-    xcb_create_window(m_connection, 0,
+    m_window = clip_xcb_generate_id(m_connection);
+    clip_xcb_create_window(m_connection, 0,
                       m_window,
                       screen->root,
                       0, 0, 1, 1, 0,

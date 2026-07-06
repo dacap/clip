@@ -17,6 +17,10 @@
 
 static void* libxcb = nullptr;
 DEFINE_POINTER_TO_FUNCTION(clip_xcb_connect);
+DEFINE_POINTER_TO_FUNCTION(clip_xcb_get_setup);
+DEFINE_POINTER_TO_FUNCTION(clip_xcb_setup_roots_iterator);
+DEFINE_POINTER_TO_FUNCTION(clip_xcb_generate_id);
+DEFINE_POINTER_TO_FUNCTION(clip_xcb_create_window);
 
 namespace
 {
@@ -57,11 +61,19 @@ extern "C"
       return;
     }
     LOAD_POINTER_TO_FUNCTION(libxcb, xcb_connect, clip_xcb_connect);
+    LOAD_POINTER_TO_FUNCTION(libxcb, xcb_get_setup, clip_xcb_get_setup);
+    LOAD_POINTER_TO_FUNCTION(libxcb, xcb_setup_roots_iterator, clip_xcb_setup_roots_iterator);
+    LOAD_POINTER_TO_FUNCTION(libxcb, xcb_generate_id, clip_xcb_generate_id);
+    LOAD_POINTER_TO_FUNCTION(libxcb, xcb_create_window, clip_xcb_create_window);
   }
 
   void clip_xcb_functions_finalize()
   {
     NULLIFY_POINTER_TO_FUNCTION(clip_xcb_connect);
+    NULLIFY_POINTER_TO_FUNCTION(clip_xcb_get_setup);
+    NULLIFY_POINTER_TO_FUNCTION(clip_xcb_setup_roots_iterator);
+    NULLIFY_POINTER_TO_FUNCTION(clip_xcb_generate_id);
+    NULLIFY_POINTER_TO_FUNCTION(clip_xcb_create_window);
 
     if (libxcb)
     {
