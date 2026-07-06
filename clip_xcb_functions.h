@@ -3,7 +3,7 @@
 //
 // This file is released under the terms of the MIT license.
 // Read LICENSE.txt for more information.
-// 
+//
 // This file was originally copied from VTK, under BSD-3-Clause license
 // Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
 
@@ -21,12 +21,18 @@ extern "C"
   typedef xcb_screen_iterator_t 	(*clip_xcb_setup_roots_iterator_type) (const xcb_setup_t*);
   typedef uint32_t (*clip_xcb_generate_id_type)(xcb_connection_t*);
   typedef xcb_void_cookie_t (*clip_xcb_create_window_type)(xcb_connection_t*, uint8_t, xcb_window_t, xcb_window_t, int16_t,	int16_t, uint16_t, uint16_t, uint16_t ,	uint16_t, xcb_visualid_t,	uint32_t, const void*);
-  
+  typedef xcb_void_cookie_t (*clip_xcb_destroy_window_type)(xcb_connection_t*, xcb_window_t);
+  typedef int (*clip_xcb_flush_type)(xcb_connection_t*);
+  typedef void (*clip_xcb_disconnect_type)(xcb_connection_t*);
+
   CLIP_XCB_EXPORT extern clip_xcb_connect_type clip_xcb_connect;
   CLIP_XCB_EXPORT extern clip_xcb_get_setup_type clip_xcb_get_setup;
   CLIP_XCB_EXPORT extern clip_xcb_setup_roots_iterator_type clip_xcb_setup_roots_iterator;
   CLIP_XCB_EXPORT extern clip_xcb_generate_id_type clip_xcb_generate_id;
   CLIP_XCB_EXPORT extern clip_xcb_create_window_type clip_xcb_create_window;
+  CLIP_XCB_EXPORT extern clip_xcb_destroy_window_type clip_xcb_destroy_window;
+  CLIP_XCB_EXPORT extern clip_xcb_flush_type clip_xcb_flush;
+  CLIP_XCB_EXPORT extern clip_xcb_disconnect_type clip_xcb_disconnect;
 
   /**
    * Initialize the xcb function pointers by dynamically loading them from libxcb.so.

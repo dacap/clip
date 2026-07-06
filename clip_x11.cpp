@@ -138,15 +138,15 @@ public:
 #endif
 
     if (m_window) {
-      xcb_destroy_window(m_connection, m_window);
-      xcb_flush(m_connection);
+      clip_xcb_destroy_window(m_connection, m_window);
+      clip_xcb_flush(m_connection);
     }
 
     if (m_thread.joinable())
       m_thread.join();
 
     if (m_connection)
-      xcb_disconnect(m_connection);
+      clip_xcb_disconnect(m_connection);
 
     clip_xcb_functions_finalize();
   }
