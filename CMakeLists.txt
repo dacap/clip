@@ -87,7 +87,7 @@ elseif(UNIX AND NOT EMSCRIPTEN)
   endif()
 
   target_compile_definitions(clip PRIVATE -DHAVE_XCB_XLIB_H)
-  target_link_libraries(clip xcb pthread)
+  target_link_libraries(clip pthread)
 
   if(CLIP_ENABLE_IMAGE AND CLIP_X11_WITH_PNG)
     check_include_files(png.h HAVE_PNG_H)
