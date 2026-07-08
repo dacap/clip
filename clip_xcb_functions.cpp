@@ -14,6 +14,7 @@
 
 #define NULLIFY_POINTER_TO_FUNCTION(name) name = nullptr
 #define DEFINE_POINTER_TO_FUNCTION(name) name##_type NULLIFY_POINTER_TO_FUNCTION(name)
+#define LOAD_POINTER_TO_FUNCTION(lib, symbol, name) name = reinterpret_cast<name##_type>(dlsym(lib, #symbol));
 
 static void* libxcb = nullptr;
 DEFINE_POINTER_TO_FUNCTION(clip_xcb_connect);
@@ -39,35 +40,13 @@ DEFINE_POINTER_TO_FUNCTION(clip_xcb_get_selection_owner);
 DEFINE_POINTER_TO_FUNCTION(clip_xcb_get_selection_owner_reply);
 DEFINE_POINTER_TO_FUNCTION(clip_xcb_request_check);
 
-namespace
-{
-const char* XCB_LIBRARY_NAMES[] = { "libxcb.so.1.1.0", "libxcb.so.1", "libxcb.so", nullptr };
-
-typedef void (*SymbolPointer)();
-
-SymbolPointer GetSymbolAddress(void* lib, const std::string& sym)
-{
-  // Hack to cast pointer-to-data to pointer-to-function.
-  union
-  {
-    void* pvoid;
-    SymbolPointer psym;
-  } result;
-  result.pvoid = dlsym(lib, sym.c_str());
-  return result.psym;
-}
-}
-
-#define LOAD_POINTER_TO_FUNCTION(lib, symbol, name)                                                \
-  name = reinterpret_cast<name##_type>(::GetSymbolAddress(lib, #symbol));                          \
-
 extern "C"
 {
   void clip_xcb_functions_initialize()
   {
-    for (const char** libName = XCB_LIBRARY_NAMES; *libName != nullptr; ++libName)
+    for (const char* libName : { "libxcb.so.1.1.0", "libxcb.so.1", "libxcb.so" })
     {
-      libxcb = dlopen(*libName, RTLD_LAZY | RTLD_LOCAL);
+      libxcb = dlopen(libName, RTLD_LAZY | RTLD_LOCAL);
       if (libxcb != nullptr)
       {
         break;
