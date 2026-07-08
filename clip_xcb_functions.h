@@ -6,6 +6,9 @@
 //
 // This file was originally copied from VTK, under BSD-3-Clause license
 // Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
+//
+// Dynamically load libxcb and provides function pointers to the API clip needs
+// in clip_x11.cpp
 
 #ifndef CLIB_XCB_FUNCTIONS_H_INCLUDED
 #define CLIB_XCB_FUNCTIONS_H_INCLUDED
