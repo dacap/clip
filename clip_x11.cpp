@@ -77,7 +77,15 @@ public:
     , m_window(0)
     , m_incr_process(false) {
 
-    clip_xcb_functions_initialize();
+    try
+    {
+      clip_xcb_functions_initialize();
+    }
+    catch (const xcb_load_failure_exception& ex)
+    {
+      throw clip_exception(ex.what());
+    }
+
     m_connection = clip_xcb_connect(nullptr, nullptr);
     if (!m_connection)
       return;
