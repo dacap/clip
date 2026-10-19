@@ -77,3 +77,8 @@ int main() {
 
 [Check the wiki](https://github.com/dacap/clip/wiki#who-is-using-clip)
 to know what projects are using the `clip` library.
+
+## License
+
+This library is distributed under the terms of the [MIT License](LICENSE.txt).
+Contributions using generative AI are not allowed.
