@@ -196,6 +196,8 @@ bool lock::impl::set_data(format f, const char* buf, size_t len) {
                                                         length:len
                                                       encoding:NSUTF8StringEncoding
                                                   freeWhenDone:NO];
+      if (!string)   // not valid UTF-8: nothing can be copied, so do not report success
+        return false;
       [pasteboard setString:string forType:NSPasteboardTypeString];
       return true;
     }
@@ -241,7 +243,11 @@ bool lock::impl::get_data(format f, char* buf, size_t len) const {
       if (reqsize == 0)
         return true;
 
-      memcpy(buf, [string UTF8String], reqsize);
+      // nil when the clipboard holds no text or text that does not convert to UTF-8
+      const char* utf8 = [string UTF8String];
+      if (!utf8)
+        return false;
+      memcpy(buf, utf8, reqsize);
       return true;
     }
 
